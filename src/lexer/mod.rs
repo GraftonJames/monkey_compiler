@@ -3,7 +3,8 @@ mod lexer_test;
 
 use std::{ops::Deref, str::Chars};
 
-use crate::token::{Token, TokenType};
+use crate::token;
+use crate::token::*;
 
 pub struct Lexer<'a> {
     input: Chars<'a>,
@@ -56,66 +57,20 @@ impl<'a> Lexer<'a> {
     fn read_single_char_token(&mut self) -> Option<Token> {
         let ch = self.ch.unwrap();
         match ch {
-            '=' => Some(Token {
-                token_type: TokenType::ASSIGN,
-                literal: ch.to_string(),
-            }),
-            '+' => Some(Token {
-                token_type: TokenType::PLUS,
-                literal: ch.to_string(),
-            }),
-            '-' => Some(Token {
-                token_type: TokenType::MINUS,
-                literal: ch.to_string(),
-            }),
-            '!' => Some(Token {
-                token_type: TokenType::BANG,
-                literal: ch.to_string(),
-            }),
-            '/' => Some(Token {
-                token_type: TokenType::SLASH,
-                literal: ch.to_string(),
-            }),
-            '*' => Some(Token {
-                token_type: TokenType::ASTERISK,
-                literal: ch.to_string(),
-            }),
-            '<' => Some(Token {
-                token_type: TokenType::LT,
-                literal: ch.to_string(),
-            }),
-            '>' => Some(Token {
-                token_type: TokenType::GT,
-                literal: ch.to_string(),
-            }),
-            ';' => Some(Token {
-                token_type: TokenType::SEMICOLON,
-                literal: ch.to_string(),
-            }),
-            '(' => Some(Token {
-                token_type: TokenType::LPAREN,
-                literal: ch.to_string(),
-            }),
-            ')' => Some(Token {
-                token_type: TokenType::RPAREN,
-                literal: ch.to_string(),
-            }),
-            ',' => Some(Token {
-                token_type: TokenType::COMMA,
-                literal: ch.to_string(),
-            }),
-            '+' => Some(Token {
-                token_type: TokenType::PLUS,
-                literal: ch.to_string(),
-            }),
-            '{' => Some(Token {
-                token_type: TokenType::LBRACE,
-                literal: ch.to_string(),
-            }),
-            '}' => Some(Token {
-                token_type: TokenType::RBRACE,
-                literal: ch.to_string(),
-            }),
+            '=' => Some(token!(TokenType::ASSIGN, ch.to_string())),
+            '+' => Some(token!(TokenType::PLUS, ch.to_string())),
+            '-' => Some(token!(TokenType::MINUS, ch.to_string())),
+            '!' => Some(token!(TokenType::BANG, ch.to_string())),
+            '/' => Some(token!(TokenType::SLASH, ch.to_string())),
+            '*' => Some(token!(TokenType::ASTERISK, ch.to_string())),
+            '<' => Some(token!(TokenType::LT, ch.to_string())),
+            '>' => Some(token!(TokenType::GT, ch.to_string())),
+            ';' => Some(token!(TokenType::SEMICOLON, ch.to_string())),
+            '(' => Some(token!(TokenType::LPAREN, ch.to_string())),
+            ')' => Some(token!(TokenType::RPAREN, ch.to_string())),
+            ',' => Some(token!(TokenType::COMMA, ch.to_string())),
+            '{' => Some(token!(TokenType::LBRACE, ch.to_string())),
+            '}' => Some(token!(TokenType::RBRACE, ch.to_string())),
             _ => None,
         }
     }

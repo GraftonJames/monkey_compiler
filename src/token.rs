@@ -21,8 +21,25 @@ pub enum TokenType {
     RPAREN,
     LBRACE,
     RBRACE,
+
+    // Keywords
     FUNCTION,
     LET,
+    TRUE,
+    FALSE,
+    IF,
+    ELSE,
+    RETURN,
+}
+
+#[macro_export]
+macro_rules! token {
+    ($tt: expr, $l:expr) => {{
+        Token {
+            token_type: $tt,
+            literal: $l,
+        }
+    }};
 }
 
 #[derive(PartialEq)]
