@@ -1,1 +1,0 @@
-/home/james/proj/monkey_compiler/target/debug/monkey-compiler: /home/james/proj/monkey_compiler/src/lexer/mod.rs /home/james/proj/monkey_compiler/src/main.rs /home/james/proj/monkey_compiler/src/token.rs
