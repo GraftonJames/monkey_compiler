@@ -40,7 +40,7 @@ impl<'a> Lexer<'a> {
     fn read_identifier(&mut self) -> String {
         let mut ident: Vec<char> = vec![];
         while self.ch.is_some() && is_letter(self.ch.unwrap()) {
-            ident .push(self.ch.unwrap());
+            ident.push(self.ch.unwrap());
             self.read_char();
         }
         ident.into_iter().collect()
@@ -93,7 +93,11 @@ impl<'a> Lexer<'a> {
     }
 
     fn skip_whitespace(&mut self) {
-        while self.ch == Some(' ') || self.ch ==Some('\t') || self.ch ==Some('\n') || self.ch ==Some('\r') {
+        while self.ch == Some(' ')
+            || self.ch == Some('\t')
+            || self.ch == Some('\n')
+            || self.ch == Some('\r')
+        {
             self.read_char();
         }
     }
@@ -102,44 +106,33 @@ impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
-        
         let tok;
-        
+
         self.skip_whitespace();
 
         if self.ch.is_none() {
-        
             tok = None;
             self.read_char();
-
         } else if let Some(token) = self.read_single_char_token() {
-
             tok = Some(token);
             self.read_char();
-        
         } else if is_letter(self.ch.unwrap()) {
-        
             let ident = self.read_identifier();
             tok = Some(Token {
                 token_type: lookup_ident(&ident),
                 literal: ident,
             });
-
         } else if self.ch.unwrap().is_digit(10) {
-
-            tok = Some( Token {
+            tok = Some(Token {
                 token_type: TokenType::INT,
                 literal: self.read_number(),
             });
-
         } else {
-            
             tok = Some(Token {
                 token_type: TokenType::ILLEGAL,
                 literal: self.ch.unwrap().to_string(),
             });
             self.read_char();
-
         };
 
         tok

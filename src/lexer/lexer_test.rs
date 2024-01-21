@@ -73,6 +73,10 @@ fn test_token_next_basic_code() {
             literal: String::from("="),
         },
         Token {
+            token_type: TokenType::INT,
+            literal: String::from("5"),
+        },
+        Token {
             token_type: TokenType::SEMICOLON,
             literal: String::from(";"),
         },
