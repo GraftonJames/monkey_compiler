@@ -3,8 +3,18 @@ pub enum TokenType {
     ILLEGAL,
     IDENT,
     INT,
+
+    // Operators
     ASSIGN,
     PLUS,
+    MINUS,
+    BANG,
+    ASTERISK,
+    SLASH,
+
+    LT,
+    GT,
+
     COMMA,
     SEMICOLON,
     LPAREN,

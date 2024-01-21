@@ -60,6 +60,34 @@ impl<'a> Lexer<'a> {
                 token_type: TokenType::ASSIGN,
                 literal: ch.to_string(),
             }),
+            '+' => Some(Token {
+                token_type: TokenType::PLUS,
+                literal: ch.to_string(),
+            }),
+            '-' => Some(Token {
+                token_type: TokenType::MINUS,
+                literal: ch.to_string(),
+            }),
+            '!' => Some(Token {
+                token_type: TokenType::BANG,
+                literal: ch.to_string(),
+            }),
+            '/' => Some(Token {
+                token_type: TokenType::SLASH,
+                literal: ch.to_string(),
+            }),
+            '*' => Some(Token {
+                token_type: TokenType::ASTERISK,
+                literal: ch.to_string(),
+            }),
+            '<' => Some(Token {
+                token_type: TokenType::LT,
+                literal: ch.to_string(),
+            }),
+            '>' => Some(Token {
+                token_type: TokenType::GT,
+                literal: ch.to_string(),
+            }),
             ';' => Some(Token {
                 token_type: TokenType::SEMICOLON,
                 literal: ch.to_string(),
