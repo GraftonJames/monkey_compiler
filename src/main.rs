@@ -12,6 +12,9 @@ fn main() {
         };
 
         let result = add(five, ten);
+        
+        10 != 9;
+        10 == 10;
     ",
     );
 

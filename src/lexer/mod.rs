@@ -1,15 +1,13 @@
 #[cfg(test)]
 mod lexer_test;
 
-use std::{ops::Deref, str::Chars};
+use std::{ops::Deref, str::Chars, iter::Peekable};
 
 use crate::token;
 use crate::token::*;
 
 pub struct Lexer<'a> {
-    input: Chars<'a>,
-    position: usize,
-    read_position: usize,
+    input: Peekable<Chars<'a>>,
     ch: Option<char>,
 }
 fn is_letter(ch: char) -> bool {
@@ -19,15 +17,18 @@ fn lookup_ident(ident: &String) -> TokenType {
     match ident.deref() {
         "fn" => TokenType::FUNCTION,
         "let" => TokenType::LET,
+        "if"=> TokenType::IF,
+        "else"=> TokenType::ELSE,
+        "return"=> TokenType::RETURN,
+        "true"=> TokenType::TRUE,
+        "false"=> TokenType::FALSE,
         _ => TokenType::IDENT,
     }
 }
 impl<'a> Lexer<'a> {
     pub fn new(input: &str) -> Lexer {
         let mut l = Lexer {
-            input: input.chars(),
-            position: 0,
-            read_position: 0,
+            input: input.chars().peekable(),
             ch: None,
         };
         l.read_char();
@@ -35,8 +36,6 @@ impl<'a> Lexer<'a> {
     }
     fn read_char(&mut self) {
         self.ch = self.input.next();
-        self.position = self.read_position;
-        self.read_position += 1;
     }
     fn read_identifier(&mut self) -> String {
         let mut ident: Vec<char> = vec![];
@@ -57,10 +56,24 @@ impl<'a> Lexer<'a> {
     fn read_single_char_token(&mut self) -> Option<Token> {
         let ch = self.ch.unwrap();
         match ch {
-            '=' => Some(token!(TokenType::ASSIGN, ch.to_string())),
+            '=' => {
+                if let Some('=') = self.input.peek()  {
+                    let first_ch = &ch;
+                    self.next();
+                    return Some(token!(TokenType::EQ, format!("{}{}",first_ch,self.ch.unwrap())));                
+                }
+                Some(token!(TokenType::ASSIGN, ch.to_string()))
+            },
             '+' => Some(token!(TokenType::PLUS, ch.to_string())),
             '-' => Some(token!(TokenType::MINUS, ch.to_string())),
-            '!' => Some(token!(TokenType::BANG, ch.to_string())),
+            '!' => { 
+                if let Some('=') = self.input.peek()  {
+                    let first_ch = &ch;
+                    self.next();
+                    return Some(token!(TokenType::NOTEQ, format!("{}{}",first_ch,self.ch.unwrap())));                
+                }
+                Some(token!(TokenType::BANG, ch.to_string()))
+            },
             '/' => Some(token!(TokenType::SLASH, ch.to_string())),
             '*' => Some(token!(TokenType::ASTERISK, ch.to_string())),
             '<' => Some(token!(TokenType::LT, ch.to_string())),

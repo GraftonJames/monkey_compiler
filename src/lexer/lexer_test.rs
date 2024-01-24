@@ -8,7 +8,7 @@ macro_rules! lexer_test_next_token {
             #[test]
             fn $name() {
                 let (input, expected) = $value;
-                assert!(Lexer::new(input).zip(expected).fold(true,|acc, (res,exp)| acc && (res == exp)));
+                assert!(Lexer::new(input).eq(expected));
             }
 
         )*
@@ -158,6 +158,9 @@ lexer_test_next_token! {
         } else {
             return false;
         }
+
+        10 == 10;
+        10 != 9;
         ",
         vec![
             token!(TokenType::LET, String::from("let")),
@@ -206,6 +209,30 @@ lexer_test_next_token! {
             token!(TokenType::INT, String::from("10")),
             token!(TokenType::GT, String::from(">")),
             token!(TokenType::INT, String::from("5")),
+            
+            token!(TokenType::IF, String::from("if")),
+            token!(TokenType::LPAREN, String::from("(")),
+            token!(TokenType::INT, String::from("5")),
+            token!(TokenType::LT, String::from("<")),
+            token!(TokenType::INT, String::from("10")),
+            token!(TokenType::RPAREN, String::from(")")),
+            token!(TokenType::LBRACE, String::from("{")),
+            token!(TokenType::RETURN, String::from("return")),
+            token!(TokenType::TRUE, String::from("true")),
+            token!(TokenType::SEMICOLON, String::from(";")),
+            token!(TokenType::RBRACE, String::from("}")),
+            token!(TokenType::ELSE, String::from("else")),
+            token!(TokenType::LBRACE, String::from("{")),
+            token!(TokenType::RETURN, String::from("return")),
+            token!(TokenType::FALSE, String::from("false")),
+            token!(TokenType::SEMICOLON, String::from(";")),
+            token!(TokenType::RBRACE, String::from("}")),
+            token!(TokenType::INT, String::from("10")),
+            token!(TokenType::NOT_EQ, String::from("!=")),
+            token!(TokenType::INT, String::from("9")),
+            token!(TokenType::INT, String::from("10")),
+            token!(TokenType::EQ, String::from("==")),
+            token!(TokenType::INT, String::from("10")),
         ].into_iter()
     ),
 }
