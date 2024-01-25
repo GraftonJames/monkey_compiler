@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod lexer_test;
 
-use std::{ops::Deref, str::Chars, iter::Peekable};
+use std::{iter::Peekable, ops::Deref, str::Chars};
 
 use crate::token;
 use crate::token::*;
 
-pub struct Lexer<'a> {
-    input: Peekable<Chars<'a>>,
+pub struct Lexer {
+    input: String,
     ch: Option<char>,
 }
 fn is_letter(ch: char) -> bool {
@@ -15,27 +15,25 @@ fn is_letter(ch: char) -> bool {
 }
 fn lookup_ident(ident: &String) -> TokenType {
     match ident.deref() {
-        "fn" => TokenType::FUNCTION,
-        "let" => TokenType::LET,
-        "if"=> TokenType::IF,
-        "else"=> TokenType::ELSE,
-        "return"=> TokenType::RETURN,
-        "true"=> TokenType::TRUE,
-        "false"=> TokenType::FALSE,
-        _ => TokenType::IDENT,
+        "fn" => TokenType::Function,
+        "let" => TokenType::Let,
+        "if" => TokenType::If,
+        "else" => TokenType::Else,
+        "return" => TokenType::Return,
+        "true" => TokenType::True,
+        "false" => TokenType::False,
+        _ => TokenType::Ident,
     }
 }
-impl<'a> Lexer<'a> {
-    pub fn new(input: &str) -> Lexer {
-        let mut l = Lexer {
-            input: input.chars().peekable(),
-            ch: None,
-        };
-        l.read_char();
-        l
+
+impl Lexer {
+    pub fn new(input: String) -> Lexer {
+        let ch = input.chars().next();
+        Lexer { input, ch }
     }
+
     fn read_char(&mut self) {
-        self.ch = self.input.next();
+        self.ch = self.input.chars().next();
     }
     fn read_identifier(&mut self) -> String {
         let mut ident: Vec<char> = vec![];
@@ -45,45 +43,49 @@ impl<'a> Lexer<'a> {
         }
         ident.into_iter().collect()
     }
+
     fn read_number(&mut self) -> String {
         let mut int = vec![];
-        while self.ch.is_some() && self.ch.unwrap().is_digit(10) {
+        while self.ch.is_some() && self.ch.unwrap().is_ascii_digit() {
             int.push(self.ch.unwrap());
             self.read_char();
         }
         int.into_iter().collect()
     }
+
     fn read_single_char_token(&mut self) -> Option<Token> {
         let ch = self.ch.unwrap();
         match ch {
             '=' => {
-                if let Some('=') = self.input.peek()  {
-                    let first_ch = &ch;
-                    self.next();
-                    return Some(token!(TokenType::EQ, format!("{}{}",first_ch,self.ch.unwrap())));                
+                let ch_next = self.input.chars().peekable().peek();
+                if ch_next.is_some() && ch_next.unwrap() == &'=' {
+                    self.read_char();
+                    let ch_next = self.ch.unwrap();
+                    return Some(token!(TokenType::Eq, format!("{}{}", ch, ch_next)));
                 }
-                Some(token!(TokenType::ASSIGN, ch.to_string()))
-            },
-            '+' => Some(token!(TokenType::PLUS, ch.to_string())),
-            '-' => Some(token!(TokenType::MINUS, ch.to_string())),
-            '!' => { 
-                if let Some('=') = self.input.peek()  {
-                    let first_ch = &ch;
-                    self.next();
-                    return Some(token!(TokenType::NOTEQ, format!("{}{}",first_ch,self.ch.unwrap())));                
+                Some(token!(TokenType::Assign, ch.to_string()))
+            }
+            '+' => Some(token!(TokenType::Plus, ch.to_string())),
+            '-' => Some(token!(TokenType::Minus, ch.to_string())),
+            '!' => {
+                let ch_next = self.input.chars().peekable().peek().clone();
+                if ch_next.is_some() && *ch_next.unwrap() == '=' {
+                    self.read_char();
+                    let ch_next = self.ch.unwrap();
+                    return Some(token!(TokenType::Noteq, format!("{}{}", ch, ch_next)));
                 }
-                Some(token!(TokenType::BANG, ch.to_string()))
-            },
-            '/' => Some(token!(TokenType::SLASH, ch.to_string())),
-            '*' => Some(token!(TokenType::ASTERISK, ch.to_string())),
-            '<' => Some(token!(TokenType::LT, ch.to_string())),
-            '>' => Some(token!(TokenType::GT, ch.to_string())),
-            ';' => Some(token!(TokenType::SEMICOLON, ch.to_string())),
-            '(' => Some(token!(TokenType::LPAREN, ch.to_string())),
-            ')' => Some(token!(TokenType::RPAREN, ch.to_string())),
-            ',' => Some(token!(TokenType::COMMA, ch.to_string())),
-            '{' => Some(token!(TokenType::LBRACE, ch.to_string())),
-            '}' => Some(token!(TokenType::RBRACE, ch.to_string())),
+                Some(token!(TokenType::Bang, ch.to_string()))
+            }
+            '/' => Some(token!(TokenType::Slash, ch.to_string())),
+            '*' => Some(token!(TokenType::Asterisk, ch.to_string())),
+            '<' => Some(token!(TokenType::Lt, ch.to_string())),
+            '>' => Some(token!(TokenType::Gt, ch.to_string())),
+            ';' => Some(token!(TokenType::Semicolon, ch.to_string())),
+            '(' => Some(token!(TokenType::Lparen, ch.to_string())),
+            ')' => Some(token!(TokenType::Rparen, ch.to_string())),
+            ',' => Some(token!(TokenType::Comma, ch.to_string())),
+            '{' => Some(token!(TokenType::Lbrace, ch.to_string())),
+            '}' => Some(token!(TokenType::Rbrace, ch.to_string())),
             _ => None,
         }
     }
@@ -98,7 +100,8 @@ impl<'a> Lexer<'a> {
         }
     }
 }
-impl<'a> Iterator for Lexer<'a> {
+
+impl Iterator for Lexer {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -118,14 +121,14 @@ impl<'a> Iterator for Lexer<'a> {
                 token_type: lookup_ident(&ident),
                 literal: ident,
             });
-        } else if self.ch.unwrap().is_digit(10) {
+        } else if self.ch.unwrap().is_ascii_digit() {
             tok = Some(Token {
-                token_type: TokenType::INT,
+                token_type: TokenType::Int,
                 literal: self.read_number(),
             });
         } else {
             tok = Some(Token {
-                token_type: TokenType::ILLEGAL,
+                token_type: TokenType::Illegal,
                 literal: self.ch.unwrap().to_string(),
             });
             self.read_char();

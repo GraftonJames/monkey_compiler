@@ -1,37 +1,37 @@
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum TokenType {
-    ILLEGAL,
-    IDENT,
-    INT,
+    Illegal,
+    Ident,
+    Int,
 
     // Operators
-    ASSIGN,
-    PLUS,
-    MINUS,
-    BANG,
-    ASTERISK,
-    SLASH,
+    Assign,
+    Plus,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
 
-    LT,
-    GT,
-    EQ,
-    NOTEQ,
+    Lt,
+    Gt,
+    Eq,
+    Noteq,
 
-    COMMA,
-    SEMICOLON,
-    LPAREN,
-    RPAREN,
-    LBRACE,
-    RBRACE,
+    Comma,
+    Semicolon,
+    Lparen,
+    Rparen,
+    Lbrace,
+    Rbrace,
 
     // Keywords
-    FUNCTION,
-    LET,
-    TRUE,
-    FALSE,
-    IF,
-    ELSE,
-    RETURN,
+    Function,
+    Let,
+    True,
+    False,
+    If,
+    Else,
+    Return,
 }
 
 #[macro_export]
@@ -44,7 +44,7 @@ macro_rules! token {
     }};
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub struct Token {
     pub token_type: TokenType,
     pub literal: String,
