@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod lexer_test;
 
-use std::{iter::Peekable, ops::Deref, str::Chars};
+use std::{iter::Peekable, ops::Deref};
 
 use crate::token;
 use crate::token::*;
 
 pub struct Lexer {
-    input: String,
+    input: Peekable<std::vec::IntoIter<char>>,
     ch: Option<char>,
 }
 fn is_letter(ch: char) -> bool {
@@ -28,17 +28,18 @@ fn lookup_ident(ident: &String) -> TokenType {
 
 impl Lexer {
     pub fn new(input: String) -> Lexer {
-        let ch = input.chars().next();
-        Lexer { input, ch }
+        let input: Vec<char> = input.chars().collect();
+        let mut input = input.into_iter().peekable();
+        let ch = input.next();
+        Lexer { input , ch }
     }
 
     fn read_char(&mut self) {
-        self.ch = self.input.chars().next();
+        self.ch = self.input.next();
     }
 
-    fn peek_char(&self) -> Option<char>{
-        let mut iter = self.input.chars().peekable();
-        iter.peek().copied()
+    fn peek_char(&mut self) -> Option<char>{
+        self.input.peek().copied()
     }
 
     fn read_identifier(&mut self) -> String {
