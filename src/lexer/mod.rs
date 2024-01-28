@@ -35,6 +35,12 @@ impl Lexer {
     fn read_char(&mut self) {
         self.ch = self.input.chars().next();
     }
+
+    fn peek_char(&self) -> Option<char>{
+        let mut iter = self.input.chars().peekable();
+        iter.peek().copied()
+    }
+
     fn read_identifier(&mut self) -> String {
         let mut ident: Vec<char> = vec![];
         while self.ch.is_some() && is_letter(self.ch.unwrap()) {
@@ -57,8 +63,8 @@ impl Lexer {
         let ch = self.ch.unwrap();
         match ch {
             '=' => {
-                let ch_next = self.input.chars().peekable().peek();
-                if ch_next.is_some() && ch_next.unwrap() == &'=' {
+                let ch_next = self.peek_char();
+                if ch_next.is_some() && ch_next.unwrap() == '=' {
                     self.read_char();
                     let ch_next = self.ch.unwrap();
                     return Some(token!(TokenType::Eq, format!("{}{}", ch, ch_next)));
@@ -68,8 +74,8 @@ impl Lexer {
             '+' => Some(token!(TokenType::Plus, ch.to_string())),
             '-' => Some(token!(TokenType::Minus, ch.to_string())),
             '!' => {
-                let ch_next = self.input.chars().peekable().peek().clone();
-                if ch_next.is_some() && *ch_next.unwrap() == '=' {
+                let ch_next = self.peek_char();
+                if ch_next.is_some() && ch_next.unwrap() == '=' {
                     self.read_char();
                     let ch_next = self.ch.unwrap();
                     return Some(token!(TokenType::Noteq, format!("{}{}", ch, ch_next)));
