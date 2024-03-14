@@ -31,14 +31,14 @@ impl Lexer {
         let input: Vec<char> = input.chars().collect();
         let mut input = input.into_iter().peekable();
         let ch = input.next();
-        Lexer { input , ch }
+        Lexer { input, ch }
     }
 
     fn read_char(&mut self) {
         self.ch = self.input.next();
     }
 
-    fn peek_char(&mut self) -> Option<char>{
+    fn peek_char(&mut self) -> Option<char> {
         self.input.peek().copied()
     }
 

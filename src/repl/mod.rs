@@ -8,7 +8,7 @@ pub fn start() {
         print!("{}", PROMPT);
         let buf: &mut String = &mut String::new();
         stdout().flush().expect("something went wrong");
-        let _ = stdin().read_line(buf); 
+        let _ = stdin().read_line(buf);
         for tok in Lexer::new(buf.to_string()) {
             print!("{:?}\n", tok);
         }
