@@ -17,9 +17,12 @@ struct Parser {
 enum ParserError {
         UnexpectedEOF { expected: TokenType },
         UnexpectedToken { expected: TokenType, token: Token },
+        UnhandledToken { token: Token },
 }
 
-type ResultStatement = Result<Option<Statement>, ParserError>;
+type ResultStatement = Result<Statement, ParserError>;
+type ResultExpression = Result<Statement, ParserError>;
+type OptionStatement = Option<Result<Statement, ParserError>>;
 
 impl Parser {
         fn new(lexer: Lexer) -> Parser {
@@ -28,7 +31,15 @@ impl Parser {
         }
 
         fn parse_program(&mut self) -> Program {
-                Program { statements: self.collect() }
+                Program {
+                        statements: self.collect(),
+                }
+        }
+
+        fn token_expression_map(&self) -> fn(&Self) -> Box<dyn Node> {
+                match self.lexer.peek().token_type {
+                        Some(TokenType::Ident) => Self::parse_identifier,
+                }
         }
 
         fn parse_let_statement(&mut self) -> ResultStatement {
@@ -36,17 +47,13 @@ impl Parser {
                 let name = self.parse_identifier()?;
                 self.expect_next_token(TokenType::Assign)?;
                 let value = self.parse_expression()?;
-                Ok(Some(Statement {
-                        node: Box::new(LetStatement { token, name, value }),
-                }))
+                Ok(Statement(Box::new(LetStatement { token, name, value })))
         }
 
         fn parse_return_statement(&mut self) -> ResultStatement {
                 let token = self.expect_next_token(TokenType::Return)?;
                 let value = self.parse_expression()?;
-                Ok(Some(Statement {
-                        node: Box::new(ReturnStatement { token, value }),
-                }))
+                Ok(Statement(Box::new(ReturnStatement { token, value })))
         }
 
         fn parse_identifier(&mut self) -> Result<ast::Identifier, ParserError> {
@@ -62,23 +69,26 @@ impl Parser {
         }
 
         fn expect_next_token(&mut self, expected: TokenType) -> Result<Token, ParserError> {
-                let token = self.lexer.next();
-                match token {
+                match self.lexer.next() {
                         Some(token) if token.token_type == expected => Ok(token),
-                        None => Err(ParserError::UnexpectedEOF { expected }),
                         Some(token) => Err(ParserError::UnexpectedToken { expected, token }),
+                        None => Err(ParserError::UnexpectedEOF { expected }),
                 }
+        }
+
+        fn parse_expression_statment(&self) -> Result<Statement, ParserError> {
+
         }
 }
 
 impl Iterator for Parser {
-        type Item = Statement;
+        type Item = Result<Statement, ParserError>;
         fn next(&mut self) -> Option<Self::Item> {
                 let token = self.lexer.peek()?;
                 match token.token_type {
-                        TokenType::Let => self.parse_let_statement().unwrap(),
-                        TokenType::Return => self.parse_return_statement().unwrap(),
-                        _ => None,
+                        TokenType::Let => Some(self.parse_let_statement()),
+                        TokenType::Return => Some(self.parse_return_statement()),
+                        _ => Some(self.parse_expression_statment()),
                 }
         }
 }

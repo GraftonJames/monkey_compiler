@@ -1,5 +1,5 @@
-use crate::parser::*;
 use crate::lexer::*;
+use crate::parser::*;
 
 #[test]
 fn test_let_statements() {
@@ -14,13 +14,9 @@ fn test_let_statements() {
         let program = program.statements;
 
         assert_eq!(program.len(), 3);
-        
-        let expected = vec![
-                ("x", "5"),
-                ("y", "10"),
-                ("foobar", "5165157"),
-        ];
+
+        let expected = vec![("x", "5"), ("y", "10"), ("foobar", "5165157")];
         for stmt in program {
-               assert_eq!(stmt.node.token_literal(), ""); 
+                assert_eq!(stmt.node.token_literal(), "");
         }
-}    
+}
