@@ -8,38 +8,44 @@ use crate::{
         token::{Token, TokenType},
 };
 use core::iter::Peekable;
+use std::{collections::HashMap, string::ParseError};
 
 struct Parser {
         lexer: Peekable<Lexer>,
+
+        prefix_parse_fn: HashMap<TokenType, Box<ParsePrefixFunction>>,
+        infix_parse_fn: HashMap<TokenType, Box<ParseInfixFunction>>,
 }
 
 #[derive(Debug)]
 enum ParserError {
         UnexpectedEOF { expected: TokenType },
         UnexpectedToken { expected: TokenType, token: Token },
-        UnhandledToken { token: Token },
 }
 
 type ResultStatement = Result<Statement, ParserError>;
 type ResultExpression = Result<Statement, ParserError>;
-type OptionStatement = Option<Result<Statement, ParserError>>;
+
+type ParsePrefixFunction = dyn Fn(&mut Parser) -> Result<Expression, ParserError>;
+type ParseInfixFunction = dyn Fn(&mut Parser) -> Result<Expression, ParserError>;
 
 impl Parser {
         fn new(lexer: Lexer) -> Parser {
                 let lexer = lexer.peekable();
-                Parser { lexer }
-        }
-
-        fn parse_program(&mut self) -> Program {
-                Program {
-                        statements: self.collect(),
+                let prefix_parse_fn: HashMap<TokenType, Box<ParsePrefixFunction>> = HashMap::from([
+                        (TokenType::Ident, Box::new(Parser::parse_identifier_expression) as Box<ParsePrefixFunction>),       
+                ]);
+                let infix_parse_fn = HashMap::new();
+                Parser {
+                        lexer,
+                        prefix_parse_fn,
+                        infix_parse_fn,
                 }
         }
 
-        fn token_expression_map(&self) -> fn(&Self) -> Box<dyn Node> {
-                match self.lexer.peek().token_type {
-                        Some(TokenType::Ident) => Self::parse_identifier,
-                }
+        fn parse_program(self) -> Result<Program, ParserError> {
+                let statements = self.collect::<Result<Vec<Statement>, ParserError>>()?;
+                Ok(Program { statements })
         }
 
         fn parse_let_statement(&mut self) -> ResultStatement {
@@ -75,10 +81,12 @@ impl Parser {
                         None => Err(ParserError::UnexpectedEOF { expected }),
                 }
         }
-
-        fn parse_expression_statment(&self) -> Result<Statement, ParserError> {
+        
+        fn parse_identifier_expression(&mut self) -> Result<Expression, ParserError> {
 
         }
+
+        fn parse_expression_statment(&self) -> Result<Statement, ParserError> {}
 }
 
 impl Iterator for Parser {
@@ -92,3 +100,5 @@ impl Iterator for Parser {
                 }
         }
 }
+
+

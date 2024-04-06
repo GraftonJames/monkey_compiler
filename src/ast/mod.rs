@@ -108,3 +108,10 @@ impl Node for Identifier {
                 self.value
         }
 }
+
+impl From<Identifier> for Expression {
+        fn from(value: Identifier) -> Self {
+            Expression(Box::new(value))
+        }
+}
+
