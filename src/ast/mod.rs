@@ -15,6 +15,7 @@ impl Node for Statement {
                 self.0.string()
         }
 }
+
 pub struct Expression(pub Box<dyn Node>);
 impl Node for Expression {
         fn token_literal(&self) -> String {
@@ -94,6 +95,7 @@ impl Node for ReturnStatement {
                 self.token_literal() + " " + &self.value.string() + ";"
         }
 }
+
 pub struct Identifier {
         pub token: Token,
         pub value: String,
@@ -111,7 +113,6 @@ impl Node for Identifier {
 
 impl From<Identifier> for Expression {
         fn from(value: Identifier) -> Self {
-            Expression(Box::new(value))
+                Expression(Box::new(value))
         }
 }
-

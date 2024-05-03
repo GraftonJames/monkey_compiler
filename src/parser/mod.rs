@@ -8,7 +8,7 @@ use crate::{
         token::{Token, TokenType},
 };
 use core::iter::Peekable;
-use std::{collections::HashMap, string::ParseError};
+use std::collections::HashMap;
 
 struct Parser {
         lexer: Peekable<Lexer>,
@@ -21,6 +21,7 @@ struct Parser {
 enum ParserError {
         UnexpectedEOF { expected: TokenType },
         UnexpectedToken { expected: TokenType, token: Token },
+        UnhandledError,
 }
 
 type ResultStatement = Result<Statement, ParserError>;
@@ -32,9 +33,12 @@ type ParseInfixFunction = dyn Fn(&mut Parser) -> Result<Expression, ParserError>
 impl Parser {
         fn new(lexer: Lexer) -> Parser {
                 let lexer = lexer.peekable();
-                let prefix_parse_fn: HashMap<TokenType, Box<ParsePrefixFunction>> = HashMap::from([
-                        (TokenType::Ident, Box::new(Parser::parse_identifier_expression) as Box<ParsePrefixFunction>),       
-                ]);
+                let prefix_parse_fn: HashMap<TokenType, Box<ParsePrefixFunction>> =
+                        HashMap::from([(
+                                TokenType::Ident,
+                                Box::new(Parser::parse_identifier_expression)
+                                        as Box<ParsePrefixFunction>,
+                        )]);
                 let infix_parse_fn = HashMap::new();
                 Parser {
                         lexer,
@@ -70,8 +74,15 @@ impl Parser {
                 })
         }
 
-        fn parse_expression(&self) -> Result<ast::Expression, ParserError> {
-                todo!()
+        fn parse_expression(&mut self) -> Result<ast::Expression, ParserError> {
+                let token = self.lexer.peek().ok_or(ParserError::UnhandledError)?;
+                let prefix = self
+                        .prefix_parse_fn
+                        .get(&token.token_type)
+                        .ok_or(ParserError::UnhandledError)?
+                        .clone();
+                let left_exp = prefix(self);
+                left_exp
         }
 
         fn expect_next_token(&mut self, expected: TokenType) -> Result<Token, ParserError> {
@@ -81,12 +92,23 @@ impl Parser {
                         None => Err(ParserError::UnexpectedEOF { expected }),
                 }
         }
-        
-        fn parse_identifier_expression(&mut self) -> Result<Expression, ParserError> {
 
+        fn parse_identifier_expression(&mut self) -> Result<Expression, ParserError> {
+                let token = self.lexer.next().unwrap();
+                let value = token.literal.clone();
+                Ok(Expression(
+                        Box::new(Identifier { token, value }) as Box<dyn Node>
+                ))
         }
 
-        fn parse_expression_statment(&self) -> Result<Statement, ParserError> {}
+        fn parse_expression_statment(&mut self) -> Result<Statement, ParserError> {
+                let expression = self.parse_expression()?;
+                let token = *self.lexer.peek().unwrap().clone();
+                Ok(Statement(Box::new(ExpressionStatement {
+                        expression,
+                        token,
+                }) as Box<dyn Node>))
+        }
 }
 
 impl Iterator for Parser {
@@ -100,5 +122,3 @@ impl Iterator for Parser {
                 }
         }
 }
-
-
