@@ -1,51 +1,51 @@
-#[derive(PartialEq, Eq, Debug, Hash)]
+#[derive(PartialEq, Eq, Debug, Hash, Clone)]
 pub enum TokenType {
-        Illegal,
-        Ident,
-        Int,
+    Illegal,
+    Ident,
+    Int,
 
-        // Operators
-        Assign,
-        Plus,
-        Minus,
-        Bang,
-        Asterisk,
-        Slash,
+    // Operators
+    Assign,
+    Plus,
+    Minus,
+    Bang,
+    Asterisk,
+    Slash,
 
-        Lt,
-        Gt,
-        Eq,
-        Noteq,
+    Lt,
+    Gt,
+    Eq,
+    Noteq,
 
-        Comma,
-        Semicolon,
-        Lparen,
-        Rparen,
-        Lbrace,
-        Rbrace,
+    Comma,
+    Semicolon,
+    Lparen,
+    Rparen,
+    Lbrace,
+    Rbrace,
 
-        // Keywords
-        Function,
-        Let,
-        True,
-        False,
-        If,
-        Else,
-        Return,
+    // Keywords
+    Function,
+    Let,
+    True,
+    False,
+    If,
+    Else,
+    Return,
 }
 
 #[macro_export]
 macro_rules! token {
-        ($tt: expr, $l:expr) => {{
-                Token {
-                        token_type: $tt,
-                        literal: $l,
-                }
-        }};
+    ($tt: expr, $l:expr) => {{
+        Token {
+            token_type: $tt,
+            literal: $l,
+        }
+    }};
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Token {
-        pub token_type: TokenType,
-        pub literal: String,
+    pub token_type: TokenType,
+    pub literal: String,
 }

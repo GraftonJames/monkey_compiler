@@ -85,3 +85,51 @@ impl Node for Identifier {
         self.value.clone()
     }
 }
+
+pub struct IntegerLiteral {
+    pub token: Token,
+    pub value: i64,
+}
+
+impl Node for IntegerLiteral {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        self.token.literal.clone()
+    }
+}
+
+pub struct PrefixExpression {
+    pub token: Token,
+    pub operator: String,
+    pub right: BoxNode,
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        "(".to_owned() + &self.operator + &self.right.string() + ")"
+    }
+}
+
+pub struct InfixExpression {
+    pub token: Token,
+    pub left: BoxNode,
+    pub operator: String,
+    pub right: BoxNode,
+}
+
+impl Node for InfixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+        "(".to_owned() + &self.left.string() + &self.operator + &self.right.string() + ")"
+    }
+}
