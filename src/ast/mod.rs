@@ -1,12 +1,14 @@
-mod eval;
-
-use crate::parser::ParserError;
-
 use super::token::Token;
+use crate::{
+	eval::{Eval, EvalNode},
+	parser::ParserError,
+};
+use std::any::Any;
 
-pub trait Node {
+pub trait Node: Any {
 	fn token_literal(&self) -> String;
 	fn string(&self) -> String;
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode>;
 }
 
 pub struct Program {
@@ -16,6 +18,15 @@ pub struct Program {
 type BoxNode = Box<dyn Node>;
 type ResultNode = Result<Box<dyn Node>, ParserError>;
 
+pub trait BoxEvalWrapper {
+	fn box_into_eval_node(self: Box<Self>) -> Box<dyn EvalNode>;
+}
+impl<N: Node + ?Sized> BoxEvalWrapper for Box<N> {
+	fn box_into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		(*self).into_eval_node()
+	}
+}
+
 impl Node for Program {
 	fn token_literal(&self) -> String {
 		if self.statements.len() > 0 {
@@ -24,12 +35,14 @@ impl Node for Program {
 			"".to_string()
 		}
 	}
-
 	fn string(&self) -> String {
 		self.statements
 			.iter()
 			.clone()
 			.fold("".to_string(), |acc, x| acc + "\n" + &x.string())
+	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
 	}
 }
 
@@ -40,7 +53,6 @@ impl Node for ResultNode {
 			Err(_) => "err".to_string(),
 		}
 	}
-
 	fn string(&self) -> String {
 		match self {
 			Ok(ok_node) => return ok_node.string(),
@@ -54,15 +66,8 @@ impl Node for ResultNode {
 			Err(ParserError::NoInfixParseFn(msg)) => return msg.clone().to_string(),
 		}
 	}
-}
-
-impl Node for BoxNode {
-	fn token_literal(&self) -> String {
-		self.token_literal()
-	}
-
-	fn string(&self) -> String {
-		self.string()
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		panic!()
 	}
 }
 
@@ -89,6 +94,9 @@ impl Node for CallExpression {
 
 		out
 	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
+	}
 }
 
 pub struct IfExpression {
@@ -112,6 +120,9 @@ impl Node for IfExpression {
 
 			None => return out,
 		}
+	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
 	}
 }
 
@@ -140,6 +151,9 @@ impl Node for FunctionLiteral {
 
 		out
 	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
+	}
 }
 
 pub struct BlockStatement {
@@ -157,19 +171,25 @@ impl Node for BlockStatement {
 			.clone()
 			.fold("".to_string(), |acc, x| acc + "/n" + &x.string())
 	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
+	}
 }
 
-pub struct Boolean {
+pub struct BooleanLiteral {
 	pub token: Token,
 	pub value: bool,
 }
-impl Node for Boolean {
+impl Node for BooleanLiteral {
 	fn token_literal(&self) -> String {
 		self.value.to_string()
 	}
 
 	fn string(&self) -> String {
 		self.value.to_string()
+	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
 	}
 }
 pub struct ExpressionStatement {
@@ -183,6 +203,9 @@ impl Node for ExpressionStatement {
 
 	fn string(&self) -> String {
 		self.expression.string()
+	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
 	}
 }
 
@@ -203,6 +226,9 @@ impl Node for LetStatement {
 			+ " = " + &self.value.string()
 			+ ";"
 	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
+	}
 }
 
 pub struct ReturnStatement {
@@ -216,6 +242,9 @@ impl Node for ReturnStatement {
 
 	fn string(&self) -> String {
 		self.token_literal() + " " + &self.value.string() + ";"
+	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
 	}
 }
 
@@ -232,6 +261,9 @@ impl Node for Identifier {
 	fn string(&self) -> String {
 		self.value.clone()
 	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
+	}
 }
 
 pub struct IntegerLiteral {
@@ -246,6 +278,9 @@ impl Node for IntegerLiteral {
 
 	fn string(&self) -> String {
 		self.token.literal.clone()
+	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
 	}
 }
 
@@ -263,6 +298,9 @@ impl Node for PrefixExpression {
 	fn string(&self) -> String {
 		"(".to_owned() + &self.operator + &self.right.string() + ")"
 	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
+	}
 }
 
 pub struct InfixExpression {
@@ -279,5 +317,8 @@ impl Node for InfixExpression {
 
 	fn string(&self) -> String {
 		"(".to_owned() + &self.left.string() + &self.operator + &self.right.string() + ")"
+	}
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
 	}
 }

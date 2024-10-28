@@ -138,7 +138,7 @@ impl Parser {
 		let name = self.parse_identifier()?;
 		self.expect_next_token(TokenType::Assign)?;
 		let value = Box::new(self.parse_expression(LOWEST));
-		self.expect_next_token(TokenType::Semicolon);
+		self.expect_next_token(TokenType::Semicolon)?;
 		Ok(Box::new(LetStatement { token, name, value }))
 	}
 
@@ -163,7 +163,7 @@ impl Parser {
 			"expected Boolean token found EOF".to_string(),
 		))?;
 
-		Ok(Box::new(Boolean { token, value }))
+		Ok(Box::new(BooleanLiteral { token, value }))
 	}
 
 	fn parse_if_statement(&mut self) -> ResultNode {

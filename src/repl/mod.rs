@@ -1,4 +1,5 @@
-use crate::parser::{Parser, ParserError};
+use crate::object::{self, Null, Obj};
+use crate::parser::Parser;
 use crate::{ast::Node, lexer::Lexer};
 use std::io::{stdin, stdout, Write};
 
@@ -14,14 +15,12 @@ pub fn start() {
 		let lex = Lexer::new(buf.to_string());
 		let par = Parser::new(lex);
 
-		let program = par
-			.parse_program()
-			.statements
-			.into_iter()
-			.map(|s| s.string());
+		let program = Box::new(par.parse_program())
+			.into_eval_node()
+			.eval()
+			.unwrap_or(Box::new(object::Null {}))
+			.inspect();
 
-		for s in program {
-			print!("{}\n", s);
-		}
+		print!("{}\n", program);
 	}
 }
