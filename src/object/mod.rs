@@ -4,6 +4,7 @@ use crate::eval::EvalError;
 
 #[derive(PartialEq)]
 pub enum ObjType {
+	ReturnValue,
 	Integer,
 	Boolean,
 	Null,
@@ -36,11 +37,26 @@ impl Obj for ObjVec {
 		)
 	}
 
-	fn as_any(&self) ->  &dyn Any{
+	fn as_any(&self) -> &dyn Any {
 		self
 	}
 }
+pub struct ReturnValue {
+	pub val: Box<dyn Obj>,
+}
+impl Obj for ReturnValue {
+	fn get_type(&self) -> ObjType {
+		ObjType::ReturnValue
+	}
 
+	fn inspect(&self) -> String {
+		self.val.inspect()
+	}
+
+	fn as_any(&self) -> &dyn Any {
+		self
+	}
+}
 pub struct Integer {
 	pub val: i64,
 }
@@ -53,7 +69,7 @@ impl Obj for Integer {
 		format!("{0}", self.val)
 	}
 
-	fn as_any(&self) ->  &dyn Any{
+	fn as_any(&self) -> &dyn Any {
 		self
 	}
 }
@@ -85,7 +101,7 @@ impl Obj for Null {
 		String::from("null")
 	}
 
-	fn as_any(&self) ->  &dyn Any{
+	fn as_any(&self) -> &dyn Any {
 		self
 	}
 }

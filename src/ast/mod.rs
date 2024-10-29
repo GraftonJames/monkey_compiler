@@ -169,7 +169,7 @@ impl Node for BlockStatement {
 		self.statements
 			.iter()
 			.clone()
-			.fold("".to_string(), |acc, x| acc + "/n" + &x.string())
+			.fold("".to_string(), |acc, x| acc + "\n" + &x.string())
 	}
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })

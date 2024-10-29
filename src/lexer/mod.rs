@@ -145,7 +145,6 @@ impl Iterator for Lexer {
 
 		if tok.is_some() {
 			let tok_ok = tok.clone().unwrap();
-			print!("token: {}\n", tok_ok.token_type.get_name());
 		}
 		tok
 	}

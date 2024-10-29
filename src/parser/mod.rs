@@ -16,7 +16,6 @@ const PREFIX: u8 = 6;
 const CALL: u8 = 7;
 
 fn get_precedence(token_type: &TokenType) -> u8 {
-	print!("prec token: {}\n", token_type.get_name());
 	match token_type {
 		TokenType::Plus | TokenType::Minus => SUM,
 		TokenType::Asterisk | TokenType::Slash => PRODUCT,
@@ -176,10 +175,9 @@ impl Parser {
 		let condition = self.parse_expression(LOWEST)?;
 
 		self.expect_next_token(TokenType::Rparen)?;
-		self.expect_next_token(TokenType::Lbrace)?;
 
 		let consequence = self.parse_block_statement()?;
-		let alternative = None;
+		let alternative = self.parse_else_block()?;
 
 		let expression = IfExpression {
 			token,
@@ -189,6 +187,14 @@ impl Parser {
 		};
 		let expression = Box::new(expression);
 		Ok(expression)
+	}
+
+	fn parse_else_block(&mut self) -> Result<Option<BlockStatement>, ParserError> {
+		if !self.peek_token_is_type(TokenType::Else)? {
+			return Ok(None);
+		}
+		self.lexer.next().unwrap();
+		Ok(Some(self.parse_block_statement()?))
 	}
 
 	fn parse_grouped_expression(&mut self) -> ResultNode {
@@ -202,7 +208,6 @@ impl Parser {
 	fn parse_expression(&mut self, precedence: u8) -> ResultNode {
 		let token = self.peek_token()?;
 
-		print!("pe: {}\n", token.token_type.get_name());
 		let prefix = self.prefix_parse_fn.get(&token.token_type).ok_or_else(|| {
 			self.lexer.next();
 			return ParserError::NoPrefixParseFn(format!(
@@ -211,7 +216,6 @@ impl Parser {
 			));
 		})?;
 		let mut left_exp: BoxNode = prefix(self)?;
-		print!("exp: {}\n", left_exp.string());
 
 		left_exp = self.parse_expression_infix(left_exp, precedence)?;
 
@@ -226,7 +230,6 @@ impl Parser {
 		}
 		let peek_token = self.peek_token()?;
 
-		print!("pei: {}\n", peek_token.token_type.get_name());
 		let infix = self
 			.infix_parse_fn
 			.get(&peek_token.token_type)
@@ -309,7 +312,6 @@ impl Parser {
 
 	fn parse_infix_expression(&mut self, left: BoxNode) -> ResultNode {
 		let token = self.lexer.next().unwrap();
-		print!("infix on {}\n", token.token_type.get_name());
 		let precedence = get_precedence(&token.token_type);
 		let right = self.parse_expression(precedence)?;
 		let operator = token.literal.clone();
@@ -353,6 +355,7 @@ impl Parser {
 			.ok_or(ParserError::UnexpectedEOF("Unexpected EOF".to_string()))?;
 
 		if peek_tok.token_type == end_token {
+			self.expect_next_token(end_token)?;
 			return Ok(acc);
 		}
 
