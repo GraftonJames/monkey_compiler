@@ -32,9 +32,6 @@ pub enum TokenType {
 	If,
 	Else,
 	Return,
-
-	// Error
-	Error,
 }
 
 impl TokenType {
@@ -66,7 +63,6 @@ impl TokenType {
 			TokenType::If => "If Token".to_string(),
 			TokenType::Else => "Else Token".to_string(),
 			TokenType::Return => "Return Token".to_string(),
-			TokenType::Error => "Error Token".to_string(),
 		}
 	}
 }

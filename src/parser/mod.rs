@@ -41,6 +41,21 @@ pub enum ParserError {
 	UnhandledError,
 }
 
+impl ParserError {
+	pub fn get_err_msg(&self) -> String {
+		match self {
+			ParserError::UnexpectedEOF(m) => m.to_string(),
+			ParserError::UnexpectedToken(m) => m.to_string(),
+			ParserError::IntParseError(m) => m.to_string(),
+			ParserError::NoPrefixParseFn(m) => m.to_string(),
+			ParserError::NoInfixParseFn(m) => m.to_string(),
+			ParserError::UnhandledError => {
+				String::from("Encoutered an unexpected Error")
+			}
+		}
+	}
+}
+
 type BoxNode = Box<dyn Node>;
 type ResultNode = Result<BoxNode, ParserError>;
 type ParseFunction = fn(&mut Parser) -> ResultNode;

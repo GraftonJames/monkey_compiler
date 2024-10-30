@@ -143,9 +143,6 @@ impl Iterator for Lexer {
 			self.read_char();
 		};
 
-		if tok.is_some() {
-			let tok_ok = tok.clone().unwrap();
-		}
 		tok
 	}
 }

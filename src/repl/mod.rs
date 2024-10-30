@@ -18,9 +18,10 @@ pub fn start() {
 		let program = Box::new(par.parse_program())
 			.into_eval_node()
 			.eval()
-			.unwrap_or(Box::new(object::Null {}))
 			.inspect();
 
 		print!("{}\n", program);
 	}
 }
+
+

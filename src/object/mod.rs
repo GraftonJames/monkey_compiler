@@ -1,4 +1,4 @@
-use std::any::Any;
+use std::{any::Any, collections::HashMap};
 
 use crate::eval::EvalError;
 
@@ -9,12 +9,53 @@ pub enum ObjType {
 	Boolean,
 	Null,
 	ObjVec,
+	Error,
+}
+
+pub struct Env {
+	store: HashMap<String, Box<dyn Obj>>,
+}
+
+impl Env {
+	pub fn new() -> Self {
+		let store = HashMap::new();
+		Env {store}
+	}
+	pub fn get(&self, name: String) -> Result<&Box<dyn Obj>, EvalError> {
+		match self.store.get(&name) {
+			None => Err(EvalError::Undefined(String::from(""))),
+			Some(o) => Ok(o),
+		}
+	}
+	pub fn set(&mut self, name: String, val: Box<dyn Obj>) {
+		self.store.insert(name, val);
+	}
 }
 
 pub trait Obj: Any {
 	fn get_type(&self) -> ObjType;
 	fn inspect(&self) -> String;
 	fn as_any(&self) -> &dyn Any;
+}
+
+impl Obj for Result<Box<dyn Obj>, EvalError> {
+	fn get_type(&self) -> ObjType {
+		match self {
+			Err(_) => ObjType::Error,
+			Ok(o) => o.get_type(),
+		}
+	}
+
+	fn inspect(&self) -> String {
+		match self {
+			Err(e) => e.get_err_msg(),
+			Ok(o) => o.inspect(),
+		}
+	}
+
+	fn as_any(&self) -> &dyn Any {
+		self
+	}
 }
 
 pub struct ObjVec {
