@@ -1,6 +1,7 @@
+use crate::object;
+use crate::{ast, eval::EvalError};
+use crate::ast::Node;
 use std::{any::Any, collections::HashMap};
-
-use crate::eval::EvalError;
 
 #[derive(PartialEq)]
 pub enum ObjType {
@@ -10,25 +11,34 @@ pub enum ObjType {
 	Null,
 	ObjVec,
 	Error,
+	Function,
 }
 
+#[derive(Clone)]
 pub struct Env {
-	store: HashMap<String, Box<dyn Obj>>,
+	pub store: HashMap<String, Box<dyn Obj>>,
+	pub outer: Option<Box<Env>>,
 }
 
 impl Env {
-	pub fn new() -> Self {
+	pub fn new(outer: Option<Box<Env>>) -> Self {
 		let store = HashMap::new();
-		Env {store}
+		Env { store , outer}
 	}
 	pub fn get(&self, name: String) -> Result<&Box<dyn Obj>, EvalError> {
-		match self.store.get(&name) {
-			None => Err(EvalError::Undefined(String::from(""))),
-			Some(o) => Ok(o),
+		match (self.store.get(&name), &self.outer) {
+			(None, None) => Err(EvalError::Undefined(String::from(""))),
+			(Some(obj), _) => Ok(obj),
+			(None, Some(out)) => out.get(name),
 		}
 	}
 	pub fn set(&mut self, name: String, val: Box<dyn Obj>) {
 		self.store.insert(name, val);
+	}
+}
+impl Clone for Box<dyn Obj> {
+	fn clone(&self) -> Self {
+		self.clone_into_dyn()
 	}
 }
 
@@ -36,6 +46,7 @@ pub trait Obj: Any {
 	fn get_type(&self) -> ObjType;
 	fn inspect(&self) -> String;
 	fn as_any(&self) -> &dyn Any;
+	fn clone_into_dyn(&self) -> Box<dyn Obj>;
 }
 
 impl Obj for Result<Box<dyn Obj>, EvalError> {
@@ -45,43 +56,50 @@ impl Obj for Result<Box<dyn Obj>, EvalError> {
 			Ok(o) => o.get_type(),
 		}
 	}
-
 	fn inspect(&self) -> String {
 		match self {
 			Err(e) => e.get_err_msg(),
 			Ok(o) => o.inspect(),
 		}
 	}
-
 	fn as_any(&self) -> &dyn Any {
 		self
 	}
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		panic!();
+	}
 }
 
-pub struct ObjVec {
-	pub val: Vec<Result<Box<dyn Obj>, EvalError>>,
+#[derive(Clone)]
+pub struct Function {
+	pub params: Vec<ast::Identifier>,
+	pub body: ast::BlockStatement,
+	pub env: object::Env,
 }
-impl Obj for ObjVec {
+impl Obj for Function {
 	fn get_type(&self) -> ObjType {
-		ObjType::ObjVec
+		ObjType::Function
 	}
 
 	fn inspect(&self) -> String {
-		format!(
-			"{0}",
-			self.val.iter().clone().fold("".to_string(), |acc, o| acc
-				+ "\n" + o
-				.as_ref()
-				.unwrap()
-				.inspect()
-				.as_str())
-		)
+		let params = self
+			.params
+			.iter()
+			.map(|p| p.value.clone())
+			.fold(String::from(""), |acc, s| acc + "," + s.as_str());
+		String::from("fn(") + &params + ")\n" + &self.body.string() + "\n"
 	}
 
 	fn as_any(&self) -> &dyn Any {
 		self
 	}
+
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
+	}
 }
+
+#[derive(Clone)]
 pub struct ReturnValue {
 	pub val: Box<dyn Obj>,
 }
@@ -97,11 +115,15 @@ impl Obj for ReturnValue {
 	fn as_any(&self) -> &dyn Any {
 		self
 	}
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
+	}
 }
+
+#[derive(Clone)]
 pub struct Integer {
 	pub val: i64,
 }
-
 impl Obj for Integer {
 	fn get_type(&self) -> ObjType {
 		ObjType::Integer
@@ -113,12 +135,15 @@ impl Obj for Integer {
 	fn as_any(&self) -> &dyn Any {
 		self
 	}
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
+	}
 }
 
+#[derive(Clone)]
 pub struct Boolean {
 	pub val: bool,
 }
-
 impl Obj for Boolean {
 	fn get_type(&self) -> ObjType {
 		ObjType::Boolean
@@ -130,10 +155,13 @@ impl Obj for Boolean {
 	fn as_any(&self) -> &dyn Any {
 		self
 	}
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
+	}
 }
 
+#[derive(Clone)]
 pub struct Null {}
-
 impl Obj for Null {
 	fn get_type(&self) -> ObjType {
 		ObjType::Null
@@ -144,5 +172,8 @@ impl Obj for Null {
 
 	fn as_any(&self) -> &dyn Any {
 		self
+	}
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
 	}
 }

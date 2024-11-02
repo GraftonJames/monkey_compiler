@@ -31,7 +31,7 @@ pub struct Parser {
 	infix_parse_fn: HashMap<TokenType, ParseInfixFunction>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ParserError {
 	UnexpectedEOF(String),
 	UnexpectedToken(String),
@@ -40,7 +40,6 @@ pub enum ParserError {
 	NoInfixParseFn(String),
 	UnhandledError,
 }
-
 impl ParserError {
 	pub fn get_err_msg(&self) -> String {
 		match self {
@@ -151,7 +150,7 @@ impl Parser {
 		let token = self.expect_next_token(TokenType::Let)?;
 		let name = self.parse_identifier()?;
 		self.expect_next_token(TokenType::Assign)?;
-		let value = Box::new(self.parse_expression(LOWEST));
+		let value = self.parse_expression(LOWEST)?;
 		self.expect_next_token(TokenType::Semicolon)?;
 		Ok(Box::new(LetStatement { token, name, value }))
 	}
@@ -421,8 +420,7 @@ impl Parser {
 			return Ok(left);
 		}
 
-		self.lexer.next();
-		let exp = self.parse_expression(LOWEST)?;
+		let exp = self.parse_expression(CALL)?;
 		left.push(exp);
 
 		let peek_tok = self.peek_token()?;
@@ -430,6 +428,7 @@ impl Parser {
 			self.lexer.next();
 			return self.parse_call_args(left);
 		} else if peek_tok.token_type == TokenType::Rparen {
+			self.lexer.next();
 			return Ok(left);
 		} else {
 			return Err(ParserError::UnhandledError);

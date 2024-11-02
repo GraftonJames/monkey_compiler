@@ -1,4 +1,5 @@
-use crate::object::{self, Null, Obj};
+use crate::object::Env;
+use crate::object::Obj;
 use crate::parser::Parser;
 use crate::{ast::Node, lexer::Lexer};
 use std::io::{stdin, stdout, Write};
@@ -15,13 +16,12 @@ pub fn start() {
 		let lex = Lexer::new(buf.to_string());
 		let par = Parser::new(lex);
 
+		let env = &mut Env::new(None);
 		let program = Box::new(par.parse_program())
 			.into_eval_node()
-			.eval()
+			.eval(env)
 			.inspect();
 
 		print!("{}\n", program);
 	}
 }
-
-

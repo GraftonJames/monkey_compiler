@@ -1,5 +1,6 @@
 use crate::ast::*;
 use crate::{object::*, parser::ParserError};
+use std::iter::zip;
 
 type ResultObj = Result<Box<dyn Obj>, EvalError>;
 #[derive(Debug)]
@@ -70,8 +71,34 @@ impl EvalNode for Eval<IntegerLiteral> {
 
 impl EvalNode for Eval<CallExpression> {
 	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
-		todo!()
+		let CallExpression {
+			token: _,
+			function,
+			args,
+		} = self.node;
+		let function = function.into_eval_node().eval(env)?;
+		let args: Result<Vec<_>,EvalError> = args
+			.into_iter()
+			.map(|a| a.into_eval_node().eval(env))
+			.collect();
+		let args = args?;
+		apply_function(function, args)
 	}
+}
+
+fn apply_function(function: Box<dyn Obj>, args: Vec<Box<dyn Obj>>) -> ResultObj {
+	let function = function
+		.as_any()
+		.downcast_ref::<Function>()
+		.ok_or(EvalError::UnexpectedNode(String::from(
+			"Should be a function here"
+		)))?;
+	let Function { params, body, env } = function;
+
+	let env = &mut Env::new(Some(Box::new(env.clone())));
+	zip(params.into_iter(), args.into_iter()).for_each(|(p, a)| env.set(p.value.clone(), a));
+
+	Box::new(Eval{ node: body.clone()}).eval(env)
 }
 
 impl EvalNode for Eval<IfExpression> {
@@ -104,7 +131,12 @@ impl EvalNode for Eval<IfExpression> {
 }
 impl EvalNode for Eval<FunctionLiteral> {
 	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
-		todo!()
+		let FunctionLiteral {
+			token: _,
+			params,
+			body,
+		} = self.node;
+		Ok(Box::new(Function { params, body, env: env.clone() }))
 	}
 }
 impl EvalNode for Eval<BlockStatement> {
@@ -118,10 +150,13 @@ impl EvalNode for Eval<BlockStatement> {
 	}
 }
 
-fn scan_node(env: Env, node: ResultObj) -> Option<ResultObj> {
-	let res = match s {
+fn scan_node(
+	env: &mut &mut Env,
+	node: Result<Box<dyn Node + 'static>, ParserError>,
+) -> Option<ResultObj> {
+	let res = match node {
 		Err(e) => Err(EvalError::ParserError(e)),
-		Ok(o) => o.into_eval_node(env).eval(env),
+		Ok(o) => o.into_eval_node().eval(env),
 	};
 	Some(res)
 }
@@ -135,7 +170,14 @@ impl EvalNode for Eval<BooleanLiteral> {
 }
 impl EvalNode for Eval<LetStatement> {
 	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
-		todo!()
+		let LetStatement {
+			token: _,
+			name,
+			value,
+		} = self.node;
+		let value = value.into_eval_node().eval(env)?;
+		env.set(name.value, value);
+		Ok(Box::new(Null {}))
 	}
 }
 impl EvalNode for Eval<ReturnStatement> {
@@ -147,7 +189,7 @@ impl EvalNode for Eval<ReturnStatement> {
 }
 impl EvalNode for Eval<Identifier> {
 	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
-		todo!()
+		env.get(self.node.value).cloned()
 	}
 }
 impl EvalNode for Eval<PrefixExpression> {

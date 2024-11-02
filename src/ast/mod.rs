@@ -9,8 +9,9 @@ pub trait Node: Any {
 	fn token_literal(&self) -> String;
 	fn string(&self) -> String;
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode>;
+	fn clone_into_node(&self) -> Box<dyn Node>;
 }
-
+#[derive(Clone)]
 pub struct Program {
 	pub statements: Vec<ResultNode>,
 }
@@ -18,15 +19,11 @@ pub struct Program {
 type BoxNode = Box<dyn Node>;
 type ResultNode = Result<Box<dyn Node>, ParserError>;
 
-pub trait BoxEvalWrapper {
-	fn box_into_eval_node(self: Box<Self>) -> Box<dyn EvalNode>;
-}
-impl<N: Node + ?Sized> BoxEvalWrapper for Box<N> {
-	fn box_into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
-		(*self).into_eval_node()
+impl Clone for Box<dyn Node> {
+	fn clone(&self) -> Self {
+		self.clone_into_node()
 	}
 }
-
 impl Node for Program {
 	fn token_literal(&self) -> String {
 		if self.statements.len() > 0 {
@@ -43,6 +40,9 @@ impl Node for Program {
 	}
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
+	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
 	}
 }
 
@@ -67,16 +67,21 @@ impl Node for ResultNode {
 		}
 	}
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
-		panic!()
+		panic!("Unwrap result before passing into eval node")
+	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		match self {
+			Err(e) => Box::new(Err(e.clone())),
+			Ok(n) => Box::new(Ok(n.clone())),
+		}
 	}
 }
-
+#[derive(Clone)]
 pub struct CallExpression {
 	pub token: Token,
 	pub function: BoxNode,
 	pub args: Vec<BoxNode>,
 }
-
 impl Node for CallExpression {
 	fn token_literal(&self) -> String {
 		self.token.literal.clone()
@@ -97,8 +102,11 @@ impl Node for CallExpression {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct IfExpression {
 	pub token: Token,
 	pub condition: BoxNode,
@@ -124,8 +132,11 @@ impl Node for IfExpression {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct FunctionLiteral {
 	pub token: Token,
 	pub params: Vec<Identifier>,
@@ -154,8 +165,12 @@ impl Node for FunctionLiteral {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
 
+#[derive(Clone)]
 pub struct BlockStatement {
 	pub token: Token,
 	pub statements: Vec<ResultNode>,
@@ -174,8 +189,11 @@ impl Node for BlockStatement {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct BooleanLiteral {
 	pub token: Token,
 	pub value: bool,
@@ -191,7 +209,11 @@ impl Node for BooleanLiteral {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
+#[derive(Clone)]
 pub struct ExpressionStatement {
 	pub token: Token,
 	pub expression: BoxNode,
@@ -207,8 +229,11 @@ impl Node for ExpressionStatement {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct LetStatement {
 	pub token: Token,
 	pub name: Identifier,
@@ -229,8 +254,11 @@ impl Node for LetStatement {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct ReturnStatement {
 	pub token: Token,
 	pub value: BoxNode,
@@ -246,13 +274,16 @@ impl Node for ReturnStatement {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
 
+#[derive(Clone)]
 pub struct Identifier {
 	pub token: Token,
 	pub value: String,
 }
-
 impl Node for Identifier {
 	fn token_literal(&self) -> String {
 		self.token.literal.clone()
@@ -264,8 +295,11 @@ impl Node for Identifier {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct IntegerLiteral {
 	pub token: Token,
 	pub value: i64,
@@ -282,8 +316,11 @@ impl Node for IntegerLiteral {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct PrefixExpression {
 	pub token: Token,
 	pub operator: String,
@@ -301,8 +338,11 @@ impl Node for PrefixExpression {
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
 	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
+	}
 }
-
+#[derive(Clone)]
 pub struct InfixExpression {
 	pub token: Token,
 	pub left: BoxNode,
@@ -320,5 +360,8 @@ impl Node for InfixExpression {
 	}
 	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
 		Box::new(Eval { node: *self })
+	}
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
 	}
 }
