@@ -7,6 +7,7 @@ use std::io::{stdin, stdout, Write};
 const PROMPT: &str = ">>";
 
 pub fn start() {
+	let env = &mut Env::new(None);
 	loop {
 		print!("{}", PROMPT);
 		let buf: &mut String = &mut String::new();
@@ -16,12 +17,11 @@ pub fn start() {
 		let lex = Lexer::new(buf.to_string());
 		let par = Parser::new(lex);
 
-		let env = &mut Env::new(None);
 		let program = Box::new(par.parse_program())
 			.into_eval_node()
 			.eval(env)
-			.inspect();
-
+			.inspect_obj();
+		
 		print!("{}\n", program);
 	}
 }

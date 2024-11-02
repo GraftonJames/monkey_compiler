@@ -208,7 +208,7 @@ impl EvalNode for Eval<PrefixExpression> {
 	}
 }
 fn bang_op(right: Box<dyn Obj>) -> ResultObj {
-	match right.inspect().as_str() {
+	match right.inspect_obj().as_str() {
 		"true" => Ok(Box::new(Boolean { val: false })),
 		"false" => Ok(Box::new(Boolean { val: true })),
 		"null" => Ok(Box::new(Boolean { val: true })),
@@ -246,8 +246,8 @@ impl EvalNode for Eval<InfixExpression> {
 
 		Err(EvalError::UnexpectedNode(String::from(format!(
 			"left ({0}) and right ({1}) operands are not correct",
-			left.inspect(),
-			right.inspect()
+			left.inspect_obj(),
+			right.inspect_obj()
 		))))
 	}
 }

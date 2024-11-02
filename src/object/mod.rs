@@ -13,7 +13,6 @@ pub enum ObjType {
 	Error,
 	Function,
 }
-
 #[derive(Clone)]
 pub struct Env {
 	pub store: HashMap<String, Box<dyn Obj>>,
@@ -44,7 +43,7 @@ impl Clone for Box<dyn Obj> {
 
 pub trait Obj: Any {
 	fn get_type(&self) -> ObjType;
-	fn inspect(&self) -> String;
+	fn inspect_obj(&self) -> String;
 	fn as_any(&self) -> &dyn Any;
 	fn clone_into_dyn(&self) -> Box<dyn Obj>;
 }
@@ -56,10 +55,10 @@ impl Obj for Result<Box<dyn Obj>, EvalError> {
 			Ok(o) => o.get_type(),
 		}
 	}
-	fn inspect(&self) -> String {
+	fn inspect_obj(&self) -> String {
 		match self {
 			Err(e) => e.get_err_msg(),
-			Ok(o) => o.inspect(),
+			Ok(o) => o.inspect_obj(),
 		}
 	}
 	fn as_any(&self) -> &dyn Any {
@@ -81,7 +80,7 @@ impl Obj for Function {
 		ObjType::Function
 	}
 
-	fn inspect(&self) -> String {
+	fn inspect_obj(&self) -> String {
 		let params = self
 			.params
 			.iter()
@@ -108,8 +107,8 @@ impl Obj for ReturnValue {
 		ObjType::ReturnValue
 	}
 
-	fn inspect(&self) -> String {
-		self.val.inspect()
+	fn inspect_obj(&self) -> String {
+		self.val.inspect_obj()
 	}
 
 	fn as_any(&self) -> &dyn Any {
@@ -128,7 +127,7 @@ impl Obj for Integer {
 	fn get_type(&self) -> ObjType {
 		ObjType::Integer
 	}
-	fn inspect(&self) -> String {
+	fn inspect_obj(&self) -> String {
 		format!("{0}", self.val)
 	}
 
@@ -148,7 +147,7 @@ impl Obj for Boolean {
 	fn get_type(&self) -> ObjType {
 		ObjType::Boolean
 	}
-	fn inspect(&self) -> String {
+	fn inspect_obj(&self) -> String {
 		format!("{0}", self.val)
 	}
 
@@ -166,7 +165,7 @@ impl Obj for Null {
 	fn get_type(&self) -> ObjType {
 		ObjType::Null
 	}
-	fn inspect(&self) -> String {
+	fn inspect_obj(&self) -> String {
 		String::from("null")
 	}
 
