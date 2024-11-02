@@ -1,10 +1,11 @@
+use std::str::Chars;
 use std::{iter::Peekable, ops::Deref};
 
 use crate::token;
 use crate::token::*;
 
-pub struct Lexer {
-	input: Peekable<std::vec::IntoIter<char>>,
+pub struct Lexer<I: Iterator<Item = char>> {
+	input: Peekable<I>,
 	ch: Option<char>,
 }
 fn is_letter(ch: char) -> bool {
@@ -23,10 +24,9 @@ fn lookup_ident(ident: &String) -> TokenType {
 	}
 }
 
-impl Lexer {
-	pub fn new(input: String) -> Lexer {
-		let input: Vec<char> = input.chars().collect();
-		let mut input = input.into_iter().peekable();
+impl<I: Iterator<Item = char>> Lexer<I> {
+	pub fn new(input: I) -> Lexer<I> {
+		let mut input = input.peekable();
 		let ch = input.next();
 		Lexer { input, ch }
 	}
@@ -110,7 +110,7 @@ impl Lexer {
 	}
 }
 
-impl Iterator for Lexer {
+impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
 	type Item = Token;
 
 	fn next(&mut self) -> Option<Self::Item> {

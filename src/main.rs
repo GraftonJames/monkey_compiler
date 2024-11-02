@@ -7,5 +7,6 @@ mod repl;
 mod token;
 
 fn main() {
+	print!("prestart");
 	repl::start();
 }
