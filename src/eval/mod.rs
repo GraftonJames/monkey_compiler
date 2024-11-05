@@ -62,7 +62,7 @@ impl EvalNode for Eval<ExpressionStatement> {
 }
 
 impl EvalNode for Eval<IntegerLiteral> {
-	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
+	fn eval(self: Box<Self>, _env: &mut Env) -> ResultObj {
 		Ok(Box::new(Integer {
 			val: self.node.value,
 		}))
@@ -162,7 +162,7 @@ fn scan_node(
 }
 
 impl EvalNode for Eval<BooleanLiteral> {
-	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
+	fn eval(self: Box<Self>, _env: &mut Env) -> ResultObj {
 		return Ok(Box::new(Boolean {
 			val: self.node.value,
 		}));

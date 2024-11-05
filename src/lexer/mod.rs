@@ -1,4 +1,4 @@
-use std::str::Chars;
+
 use std::{iter::Peekable, ops::Deref};
 
 use crate::token;
