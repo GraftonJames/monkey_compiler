@@ -55,6 +55,12 @@ impl EvalNode for Eval<Program> {
 	}
 }
 
+impl EvalNode for Eval<StringLiteral> {
+	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
+		Ok(Box::new(StringObj { val: self.node.val }))
+	}
+}
+
 impl EvalNode for Eval<ExpressionStatement> {
 	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
 		(*self).node.expression.into_eval_node().eval(env)
@@ -77,7 +83,7 @@ impl EvalNode for Eval<CallExpression> {
 			args,
 		} = self.node;
 		let function = function.into_eval_node().eval(env)?;
-		let args: Result<Vec<_>,EvalError> = args
+		let args: Result<Vec<_>, EvalError> = args
 			.into_iter()
 			.map(|a| a.into_eval_node().eval(env))
 			.collect();
@@ -87,18 +93,18 @@ impl EvalNode for Eval<CallExpression> {
 }
 
 fn apply_function(function: Box<dyn Obj>, args: Vec<Box<dyn Obj>>) -> ResultObj {
-	let function = function
-		.as_any()
-		.downcast_ref::<Function>()
-		.ok_or(EvalError::UnexpectedNode(String::from(
-			"Should be a function here"
-		)))?;
+	let function =
+		function.as_any()
+			.downcast_ref::<Function>()
+			.ok_or(EvalError::UnexpectedNode(String::from(
+				"Should be a function here",
+			)))?;
 	let Function { params, body, env } = function;
 
 	let env = &mut Env::new(Some(Box::new(env.clone())));
 	zip(params.into_iter(), args.into_iter()).for_each(|(p, a)| env.set(p.value.clone(), a));
 
-	Box::new(Eval{ node: body.clone()}).eval(env)
+	Box::new(Eval { node: body.clone() }).eval(env)
 }
 
 impl EvalNode for Eval<IfExpression> {
@@ -136,7 +142,11 @@ impl EvalNode for Eval<FunctionLiteral> {
 			params,
 			body,
 		} = self.node;
-		Ok(Box::new(Function { params, body, env: env.clone() }))
+		Ok(Box::new(Function {
+			params,
+			body,
+			env: env.clone(),
+		}))
 	}
 }
 impl EvalNode for Eval<BlockStatement> {
@@ -237,21 +247,53 @@ impl EvalNode for Eval<InfixExpression> {
 		let left = left.into_eval_node().eval(env)?;
 		let right = right.into_eval_node().eval(env)?;
 
-		if left.get_type() == ObjType::Integer && right.get_type() == ObjType::Integer {
-			return infix_eval_int(operator, left, right);
+		match (left.get_type(), right.get_type()) {
+			(ObjType::Integer, ObjType::Integer) => {
+				infix_eval_int(operator, left, right)
+			}
+			(ObjType::Boolean, ObjType::Boolean) => {
+				infix_eval_bool(operator, left, right)
+			}
+			(ObjType::String, ObjType::String) => infix_eval_str(operator, left, right),
+			_ => Err(EvalError::UnexpectedNode(String::from(format!(
+				"{0} {2} {1} :Infix operation undefined",
+				left.get_type().string(),
+				right.get_type().string(),
+				operator,
+			)))),
 		}
-		if left.get_type() == ObjType::Boolean && right.get_type() == ObjType::Boolean {
-			return infix_eval_bool(operator, left, right);
-		}
-
-		Err(EvalError::UnexpectedNode(String::from(format!(
-			"left ({0}) and right ({1}) operands are not correct",
-			left.inspect_obj(),
-			right.inspect_obj()
-		))))
 	}
 }
+fn infix_eval_str(
+	operator: String,
+	left: Box<dyn Obj>,
+	right: Box<dyn Obj>,
+) -> Result<Box<dyn Obj>, EvalError> {
+	let left = &left
+		.as_any()
+		.downcast_ref::<StringObj>()
+		.ok_or(EvalError::UnexpectedNode(format!(
+			"{0} must operate on an integer to the left",
+			operator,
+		)))?
+		.val;
+	let right = &right
+		.as_any()
+		.downcast_ref::<StringObj>()
+		.ok_or(EvalError::UnexpectedNode(format!(
+			"{0} must operate on an integer to the right",
+			operator,
+		)))?
+		.val;
 
+	match operator.as_str() {
+		"+" => Ok(Box::new(StringObj { val: left.to_owned() + right.as_str() })), 
+		_ => Err(EvalError::Undefined(format!(
+			"String {} String Undefined",
+			operator
+		))),
+	}
+}
 fn infix_eval_bool(
 	operator: String,
 	left: Box<dyn Obj>,

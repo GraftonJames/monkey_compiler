@@ -3,6 +3,7 @@ pub enum TokenType {
 	Illegal,
 	Ident,
 	Int,
+	String,
 
 	// Operators
 	Assign,
@@ -40,6 +41,7 @@ impl TokenType {
 			TokenType::Illegal => "Illegal Token".to_string(),
 			TokenType::Ident => "Identifier Token".to_string(),
 			TokenType::Int => "Integer Token".to_string(),
+			TokenType::String => "String Token".to_string(),
 			TokenType::Assign => "Assign = Token".to_string(),
 			TokenType::Plus => "+ Token".to_string(),
 			TokenType::Minus => "- Token".to_string(),

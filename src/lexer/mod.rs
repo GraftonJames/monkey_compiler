@@ -96,8 +96,18 @@ impl<I: Iterator<Item = char>> Lexer<I> {
 			',' => Some(token!(TokenType::Comma, ch.to_string())),
 			'{' => Some(token!(TokenType::Lbrace, ch.to_string())),
 			'}' => Some(token!(TokenType::Rbrace, ch.to_string())),
+			'"' => Some(token!(TokenType::String, self.read_string(&mut String::new()))),
 			_ => None,
 		}
+	}
+	fn read_string(&mut self, acc: &mut String) -> String{
+		self.read_char();
+		let ch = self.ch.unwrap();
+		if ch == '"' {
+			return (*acc).to_string();
+		}
+		acc.push(ch);
+		self.read_string(acc)
 	}
 
 	fn skip_whitespace(&mut self) {
@@ -135,7 +145,7 @@ impl<I: Iterator<Item = char>> Iterator for Lexer<I> {
 				token_type: TokenType::Int,
 				literal: self.read_number(),
 			});
-		} else {
+		}  else {
 			tok = Some(Token {
 				token_type: TokenType::Illegal,
 				literal: self.ch.unwrap().to_string(),

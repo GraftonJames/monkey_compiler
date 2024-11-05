@@ -76,6 +76,30 @@ impl Node for ResultNode {
 		}
 	}
 }
+
+#[derive(Clone)]
+pub struct StringLiteral {
+	pub token: Token,
+	pub val: String,
+}
+impl Node for StringLiteral {
+    fn token_literal(&self) -> String {
+	    self.token.literal.clone()
+    }
+
+    fn string(&self) -> String {
+	    self.token.literal.clone()
+    }
+
+    fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+	    Box::new(Eval { node: *self})
+    }
+
+    fn clone_into_node(&self) -> Box<dyn Node> {
+	    Box::new(self.clone())
+    }
+}
+
 #[derive(Clone)]
 pub struct CallExpression {
 	pub token: Token,

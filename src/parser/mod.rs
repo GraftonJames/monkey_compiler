@@ -93,6 +93,10 @@ impl<I: Iterator<Item = char>> Parser<I> {
 			TokenType::Function,
 			Parser::<I>::parse_function_literal as ParseFunction<I>,
 		);
+		prefix_parse_fn.insert(
+			TokenType::String,
+			Parser::<I>::parse_string_literal as ParseFunction<I>,
+		);
 
 		let mut infix_parse_fn: HashMap<TokenType, ParseInfixFunction<I>> = HashMap::new();
 		infix_parse_fn.insert(
@@ -145,6 +149,12 @@ impl<I: Iterator<Item = char>> Parser<I> {
 	pub fn parse_program(self) -> Program {
 		let statements = self.collect::<Vec<ResultNode>>();
 		Program { statements }
+	}
+	
+	fn parse_string_literal(&mut self) -> ResultNode {
+		let token = self.expect_next_token(TokenType::String)?;
+		let val = token.literal.clone();
+		Ok(Box::new(StringLiteral{ token, val }))
 	}
 
 	fn parse_let_statement(&mut self) -> ResultNode {

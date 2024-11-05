@@ -1,6 +1,6 @@
+use crate::ast::Node;
 use crate::object;
 use crate::{ast, eval::EvalError};
-use crate::ast::Node;
 use std::{any::Any, collections::HashMap};
 
 #[derive(PartialEq)]
@@ -8,10 +8,26 @@ pub enum ObjType {
 	ReturnValue,
 	Integer,
 	Boolean,
+	String,
 	Null,
 	ObjVec,
 	Error,
 	Function,
+}
+
+impl ObjType {
+	pub fn string(&self) -> String {
+		match self {
+			ObjType::ReturnValue => String::from("Return Value"),
+			ObjType::Integer => String::from("Integer"),
+			ObjType::Boolean => String::from("Boolean"),
+			ObjType::String => String::from("String"),
+			ObjType::Null => String::from("Null"),
+			ObjType::ObjVec => String::from("ObjVec"),
+			ObjType::Error => String::from("Error"),
+			ObjType::Function => String::from("Function"),
+		}
+	}
 }
 #[derive(Clone)]
 pub struct Env {
@@ -22,7 +38,7 @@ pub struct Env {
 impl Env {
 	pub fn new(outer: Option<Box<Env>>) -> Self {
 		let store = HashMap::new();
-		Env { store , outer}
+		Env { store, outer }
 	}
 	pub fn get(&self, name: String) -> Result<&Box<dyn Obj>, EvalError> {
 		match (self.store.get(&name), &self.outer) {
@@ -66,6 +82,28 @@ impl Obj for Result<Box<dyn Obj>, EvalError> {
 	}
 	fn clone_into_dyn(&self) -> Box<dyn Obj> {
 		panic!();
+	}
+}
+
+#[derive(Clone)]
+pub struct StringObj {
+	pub val: String,
+}
+impl Obj for StringObj {
+	fn get_type(&self) -> ObjType {
+		ObjType::String
+	}
+
+	fn inspect_obj(&self) -> String {
+		self.val.clone()
+	}
+
+	fn as_any(&self) -> &dyn Any {
+		self
+	}
+
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
 	}
 }
 
