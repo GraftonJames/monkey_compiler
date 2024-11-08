@@ -2,6 +2,7 @@ use crate::object::Env;
 use crate::object::Obj;
 use crate::parser::Parser;
 use crate::{ast::Node, lexer::Lexer};
+use crate::eval::EvalError;
 use std::collections::VecDeque;
 use std::io;
 use std::io::stdin;
@@ -57,11 +58,19 @@ pub fn start() {
 	let lex = Lexer::new(reader);
 	let par = Parser::new(lex);
 
-	let mut eval = par.map(|n| n.unwrap().into_eval_node().eval(env));
+	let mut eval = par.map(|n| match n {
+		Ok(o) => o.into_eval_node().eval(env),
+		Err(e) => Err(EvalError::ParserError(e)),
+	});
 	loop {
-		let msg = match eval.find(|e| e.get_type() == ObjType::ReturnValue).unwrap() {
-			Ok(r) => r.inspect_obj(),
-			Err(e) => e.get_err_msg(),
+		let msg = match eval.find(|e| match e {
+			Ok(o) if o.get_type() == ObjType::ReturnValue => true,
+			Err(e) => true,
+			_ => false,
+		}) {
+			Some(Ok(o)) => o.inspect_obj(),
+			Some(Err(e)) => e.get_err_msg(),
+			None => panic!("Should not reach EOF in REPL"),
 		};
 		print!("{}<<<\n", msg);
 	}

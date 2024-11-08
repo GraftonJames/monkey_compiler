@@ -1,6 +1,8 @@
 use crate::ast::Node;
+use crate::eval::builtins::*;
 use crate::object;
 use crate::{ast, eval::EvalError};
+use std::rc::Rc;
 use std::{any::Any, collections::HashMap};
 
 #[derive(PartialEq)]
@@ -13,6 +15,7 @@ pub enum ObjType {
 	ObjVec,
 	Error,
 	Function,
+	BuiltinFunction,
 }
 
 impl ObjType {
@@ -26,27 +29,66 @@ impl ObjType {
 			ObjType::ObjVec => String::from("ObjVec"),
 			ObjType::Error => String::from("Error"),
 			ObjType::Function => String::from("Function"),
+			ObjType::BuiltinFunction => String::from("Builtin Function"),
 		}
 	}
 }
+
+#[derive(Clone)]
+pub struct Builtin {
+	pub func: Rc<Box<dyn (Fn(Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError>)>>,
+}
+impl Obj for Builtin {
+	fn get_type(&self) -> ObjType {
+		ObjType::BuiltinFunction
+	}
+	fn inspect_obj(&self) -> String {
+		String::from("Builtin Function")
+	}
+	fn as_any(&self) -> &dyn Any {
+		self
+	}
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
+	}
+}
+
 #[derive(Clone)]
 pub struct Env {
+	pub builtins: Rc<HashMap<String, Box<dyn Obj>>>,
 	pub store: HashMap<String, Box<dyn Obj>>,
 	pub outer: Option<Box<Env>>,
 }
 
 impl Env {
 	pub fn new(outer: Option<Box<Env>>) -> Self {
+		let builtins = match outer {
+			None => Rc::new(get_builtins()),
+			Some(ref e) => (e.builtins).clone(),
+		};
 		let store = HashMap::new();
-		Env { store, outer }
+		Env {
+			builtins,
+			store,
+			outer,
+		}
 	}
 	pub fn get(&self, name: String) -> Result<&Box<dyn Obj>, EvalError> {
+		match self.builtins.get(&name) {
+			Some(bi) => Ok(bi),
+			None => self.get_desc(name),
+		}
+	}
+	fn get_desc(&self, name: String) -> Result<&Box<dyn Obj>, EvalError> {
 		match (self.store.get(&name), &self.outer) {
-			(None, None) => Err(EvalError::Undefined(String::from(""))),
+			(None, None) => {
+				Err(EvalError::Undefined(String::from("Identifier not defined")))
+			}
 			(Some(obj), _) => Ok(obj),
 			(None, Some(out)) => out.get(name),
 		}
 	}
+
 	pub fn set(&mut self, name: String, val: Box<dyn Obj>) {
 		self.store.insert(name, val);
 	}

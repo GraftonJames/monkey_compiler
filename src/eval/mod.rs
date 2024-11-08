@@ -1,3 +1,5 @@
+pub mod builtins;
+
 use crate::ast::*;
 use crate::{object::*, parser::ParserError};
 use std::iter::zip;
@@ -8,6 +10,7 @@ pub enum EvalError {
 	ParserError(ParserError),
 	UnexpectedNode(String),
 	Undefined(String),
+	IncorrectArgs(String),
 }
 
 impl EvalError {
@@ -16,6 +19,7 @@ impl EvalError {
 			EvalError::ParserError(_) => String::from("ParserError"),
 			EvalError::UnexpectedNode(_) => String::from("UnexpectedNode"),
 			EvalError::Undefined(_) => String::from("Undefined"),
+			EvalError::IncorrectArgs(_) => String::from("IncorrectArgs"),
 		}
 	}
 	pub fn get_err_msg(&self) -> String {
@@ -23,6 +27,7 @@ impl EvalError {
 			EvalError::ParserError(e) => e.get_err_msg(),
 			EvalError::UnexpectedNode(m) => m.to_string(),
 			EvalError::Undefined(m) => m.to_string(),
+			EvalError::IncorrectArgs(m) => m.to_string(),
 		}
 	}
 }
@@ -88,11 +93,30 @@ impl EvalNode for Eval<CallExpression> {
 			.map(|a| a.into_eval_node().eval(env))
 			.collect();
 		let args = args?;
-		apply_function(function, args)
+		if function.get_type() == ObjType::Function {
+			return apply_function_native(function, args);
+		}
+		if function.get_type() == ObjType::BuiltinFunction {
+			return apply_function_builtin(function, args);
+		}
+		Err(EvalError::UnexpectedNode(String::from(
+			"Expected Function Identifier",
+		)))
 	}
 }
 
-fn apply_function(function: Box<dyn Obj>, args: Vec<Box<dyn Obj>>) -> ResultObj {
+fn apply_function_builtin(function: Box<dyn Obj>, args: Vec<Box<dyn Obj>>) -> ResultObj {
+	let function =
+		function.as_any()
+			.downcast_ref::<Builtin>()
+			.ok_or(EvalError::UnexpectedNode(String::from(
+				"Should be a function here",
+			)))?;
+
+	(function.func)(args)
+}
+
+fn apply_function_native(function: Box<dyn Obj>, args: Vec<Box<dyn Obj>>) -> ResultObj {
 	let function =
 		function.as_any()
 			.downcast_ref::<Function>()
@@ -287,7 +311,9 @@ fn infix_eval_str(
 		.val;
 
 	match operator.as_str() {
-		"+" => Ok(Box::new(StringObj { val: left.to_owned() + right.as_str() })), 
+		"+" => Ok(Box::new(StringObj {
+			val: left.to_owned() + right.as_str(),
+		})),
 		_ => Err(EvalError::Undefined(format!(
 			"String {} String Undefined",
 			operator
