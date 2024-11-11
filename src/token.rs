@@ -24,6 +24,8 @@ pub enum TokenType {
 	Rparen,
 	Lbrace,
 	Rbrace,
+	Lbracket,
+	Rbracket,
 
 	// Keywords
 	Function,
@@ -65,6 +67,8 @@ impl TokenType {
 			TokenType::If => "If Token".to_string(),
 			TokenType::Else => "Else Token".to_string(),
 			TokenType::Return => "Return Token".to_string(),
+			TokenType::Lbracket => "Left Bracket Token".to_string(),
+			TokenType::Rbracket => "Right Bracket Token".to_string(),
 		}
 	}
 }

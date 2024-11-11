@@ -14,6 +14,7 @@ const SUM: u8 = 4;
 const PRODUCT: u8 = 5;
 const PREFIX: u8 = 6;
 const CALL: u8 = 7;
+const INDEX: u8 = 8;
 
 fn get_precedence(token_type: &TokenType) -> u8 {
 	match token_type {
@@ -22,6 +23,7 @@ fn get_precedence(token_type: &TokenType) -> u8 {
 		TokenType::Lt | TokenType::Gt => LESSGREATER,
 		TokenType::Eq | TokenType::Noteq => EQUALS,
 		TokenType::Lparen => CALL,
+		TokenType::Lbracket => INDEX,
 		_ => LOWEST,
 	}
 }
@@ -61,80 +63,45 @@ type ResultNode = Result<BoxNode, ParserError>;
 type ParseFunction<I> = fn(&mut Parser<I>) -> ResultNode;
 type ParseInfixFunction<I> = fn(&mut Parser<I>, BoxNode) -> ResultNode;
 
+macro_rules! prefix_add {
+	($hm:ident, $tt: ident, $fn:ident) => {
+		$hm.insert(TokenType::$tt, Parser::<I>::$fn as ParseFunction<I>)
+	};
+}
+macro_rules! infix_add {
+	($hm:ident, $tt: ident, $fn:ident) => {
+		$hm.insert(TokenType::$tt, Parser::<I>::$fn as ParseInfixFunction<I>)
+	};
+}
+
 impl<I: Iterator<Item = char>> Parser<I> {
 	pub fn new(lexer: Lexer<I>) -> Parser<I> {
 		let lexer = lexer.peekable();
 
 		let mut prefix_parse_fn: HashMap<TokenType, ParseFunction<I>> = HashMap::new();
-		prefix_parse_fn.insert(
-			TokenType::Ident,
-			Parser::<I>::parse_identifier_expression as ParseFunction<I>,
-		);
-		prefix_parse_fn.insert(
-			TokenType::Int,
-			Parser::<I>::parse_integer_literal as ParseFunction<I>,
-		);
-		prefix_parse_fn.insert(
-			TokenType::Bang,
-			Parser::<I>::parse_prefix_expression as ParseFunction<I>,
-		);
-		prefix_parse_fn.insert(
-			TokenType::Minus,
-			Parser::<I>::parse_prefix_expression as ParseFunction<I>,
-		);
-		prefix_parse_fn.insert(TokenType::True, Parser::<I>::parse_boolean as ParseFunction<I>);
-		prefix_parse_fn.insert(TokenType::False, Parser::<I>::parse_boolean as ParseFunction<I>);
-		prefix_parse_fn.insert(
-			TokenType::Lparen,
-			Parser::<I>::parse_grouped_expression as ParseFunction<I>,
-		);
-		prefix_parse_fn.insert(TokenType::If, Parser::parse_if_statement as ParseFunction<I>);
-		prefix_parse_fn.insert(
-			TokenType::Function,
-			Parser::<I>::parse_function_literal as ParseFunction<I>,
-		);
-		prefix_parse_fn.insert(
-			TokenType::String,
-			Parser::<I>::parse_string_literal as ParseFunction<I>,
-		);
+		prefix_add!(prefix_parse_fn, Ident, parse_identifier_expression);
+		prefix_add!(prefix_parse_fn, Int, parse_integer_literal);
+		prefix_add!(prefix_parse_fn, Bang, parse_prefix_expression);
+		prefix_add!(prefix_parse_fn, Minus, parse_prefix_expression);
+		prefix_add!(prefix_parse_fn, True, parse_boolean);
+		prefix_add!(prefix_parse_fn, False, parse_boolean);
+		prefix_add!(prefix_parse_fn, Lparen, parse_grouped_expression);
+		prefix_add!(prefix_parse_fn, If, parse_if_statement);
+		prefix_add!(prefix_parse_fn, Function, parse_function_literal);
+		prefix_add!(prefix_parse_fn, String, parse_string_literal);
+		prefix_add!(prefix_parse_fn, Lbracket, parse_array_literal);
 
 		let mut infix_parse_fn: HashMap<TokenType, ParseInfixFunction<I>> = HashMap::new();
-		infix_parse_fn.insert(
-			TokenType::Plus,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Minus,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Slash,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Asterisk,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Eq,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Noteq,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Lt,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Gt,
-			Parser::<I>::parse_infix_expression as ParseInfixFunction<I>,
-		);
-		infix_parse_fn.insert(
-			TokenType::Lparen,
-			Parser::<I>::parse_call_expression as ParseInfixFunction<I>,
-		);
+		infix_add!(infix_parse_fn, Plus, parse_infix_expression);
+		infix_add!(infix_parse_fn, Minus, parse_infix_expression);
+		infix_add!(infix_parse_fn, Slash, parse_infix_expression);
+		infix_add!(infix_parse_fn, Asterisk, parse_infix_expression);
+		infix_add!(infix_parse_fn, Eq, parse_infix_expression);
+		infix_add!(infix_parse_fn, Noteq, parse_infix_expression);
+		infix_add!(infix_parse_fn, Lt, parse_infix_expression);
+		infix_add!(infix_parse_fn, Gt, parse_infix_expression);
+		infix_add!(infix_parse_fn, Lparen, parse_call_expression);
+		infix_add!(infix_parse_fn, Lbracket, parse_array_infix);
 
 		Parser {
 			lexer,
@@ -150,11 +117,41 @@ impl<I: Iterator<Item = char>> Parser<I> {
 		let statements = self.collect::<Vec<ResultNode>>();
 		Program { statements }
 	}
-	
+
+	fn parse_array_literal(&mut self) -> ResultNode {
+		let tok = self.expect_next_token(TokenType::Lbracket)?;
+		let mems = match self.peek_token()?.token_type {
+			TokenType::Rbracket => Vec::new(),
+			_ => self.parse_expression_list(&mut Vec::new())?,
+		};
+		Ok(Box::new(ArrayLiteral { tok, mems }))
+	}
+	fn parse_expression_list(
+		&mut self,
+		left: &mut Vec<Box<dyn Node>>,
+	) -> Result<Vec<Box<dyn Node>>, ParserError> {
+		left.push(self.parse_expression(LOWEST)?);
+
+		match self
+			.lexer
+			.next()
+			.ok_or(ParserError::UnexpectedEOF(String::from(
+				"Unexpected EOF",
+			)))?.token_type {
+
+			TokenType::Comma => self.parse_expression_list(left),
+			TokenType::Rbracket => Ok(left.to_vec()),
+			tt => Err(ParserError::UnexpectedToken(String::from(format!(
+				"{} Unexpected token",
+				tt.get_name()
+			)))),
+		}
+	}
+
 	fn parse_string_literal(&mut self) -> ResultNode {
 		let token = self.expect_next_token(TokenType::String)?;
 		let val = token.literal.clone();
-		Ok(Box::new(StringLiteral{ token, val }))
+		Ok(Box::new(StringLiteral { token, val }))
 	}
 
 	fn parse_let_statement(&mut self) -> ResultNode {
@@ -245,6 +242,13 @@ impl<I: Iterator<Item = char>> Parser<I> {
 		left_exp = self.parse_expression_infix(left_exp, precedence)?;
 
 		Ok(left_exp)
+	}
+
+	fn parse_array_infix(&mut self, left: BoxNode) -> ResultNode {
+		let tok = self.expect_next_token(TokenType::Lbracket)?;
+		let index = self.parse_expression(LOWEST)?;
+		self.expect_next_token(TokenType::Rbracket)?;
+		Ok(Box::new(IndexExpression { tok, left, index }))
 	}
 
 	fn parse_expression_infix(&mut self, left_exp: BoxNode, precedence: u8) -> ResultNode {

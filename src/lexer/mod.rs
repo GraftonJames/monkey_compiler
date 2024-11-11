@@ -96,6 +96,8 @@ impl<I: Iterator<Item = char>> Lexer<I> {
 			',' => Some(token!(TokenType::Comma, ch.to_string())),
 			'{' => Some(token!(TokenType::Lbrace, ch.to_string())),
 			'}' => Some(token!(TokenType::Rbrace, ch.to_string())),
+			'[' => Some(token!(TokenType::Lbracket, ch.to_string())),
+			']' => Some(token!(TokenType::Rbracket, ch.to_string())),
 			'"' => Some(token!(TokenType::String, self.read_string(&mut String::new()))),
 			_ => None,
 		}

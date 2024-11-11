@@ -1,7 +1,6 @@
 use crate::object::Env;
-use crate::object::Obj;
 use crate::parser::Parser;
-use crate::{ast::Node, lexer::Lexer};
+use crate::lexer::Lexer;
 use crate::eval::EvalError;
 use std::collections::VecDeque;
 use std::io;
@@ -11,7 +10,7 @@ use std::iter::*;
 
 use crate::object::ObjType;
 
-const PROMPT: &str = ">>";
+const PROMPT: &str = ">> ";
 
 struct ReplReader {
 	chars: VecDeque<u8>,
@@ -65,13 +64,13 @@ pub fn start() {
 	loop {
 		let msg = match eval.find(|e| match e {
 			Ok(o) if o.get_type() == ObjType::ReturnValue => true,
-			Err(e) => true,
+			Err(_) => true,
 			_ => false,
 		}) {
 			Some(Ok(o)) => o.inspect_obj(),
 			Some(Err(e)) => e.get_err_msg(),
 			None => panic!("Should not reach EOF in REPL"),
 		};
-		print!("{}<<<\n", msg);
+		print!("<< {}\n", msg);
 	}
 }

@@ -2,6 +2,7 @@ use crate::ast::Node;
 use crate::eval::builtins::*;
 use crate::object;
 use crate::{ast, eval::EvalError};
+use std::collections::VecDeque;
 use std::rc::Rc;
 use std::{any::Any, collections::HashMap};
 
@@ -11,6 +12,7 @@ pub enum ObjType {
 	Integer,
 	Boolean,
 	String,
+	Array,
 	Null,
 	ObjVec,
 	Error,
@@ -30,7 +32,28 @@ impl ObjType {
 			ObjType::Error => String::from("Error"),
 			ObjType::Function => String::from("Function"),
 			ObjType::BuiltinFunction => String::from("Builtin Function"),
+			ObjType::Array => String::from("Array"),
 		}
+	}
+}
+
+#[derive(Clone)]
+pub struct Array {
+	pub mems: VecDeque<Box<dyn Obj>>,
+}
+impl Obj for Array {
+	fn get_type(&self) -> ObjType {
+		ObjType::Array
+	}
+	fn inspect_obj(&self) -> String {
+		let out = self.mems.iter().fold(String::new(), |acc, m| acc + ", " + m.inspect_obj().as_str());
+		String::from("[") + out.as_str() + "]"
+	}
+	fn as_any(&self) -> &dyn Any {
+		self
+	}
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
 	}
 }
 

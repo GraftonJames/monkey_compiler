@@ -2,6 +2,7 @@ pub mod builtins;
 
 use crate::ast::*;
 use crate::{object::*, parser::ParserError};
+use std::collections::VecDeque;
 use std::iter::zip;
 
 type ResultObj = Result<Box<dyn Obj>, EvalError>;
@@ -11,6 +12,7 @@ pub enum EvalError {
 	UnexpectedNode(String),
 	Undefined(String),
 	IncorrectArgs(String),
+	OutOfBounds(String),
 }
 
 impl EvalError {
@@ -20,6 +22,7 @@ impl EvalError {
 			EvalError::UnexpectedNode(_) => String::from("UnexpectedNode"),
 			EvalError::Undefined(_) => String::from("Undefined"),
 			EvalError::IncorrectArgs(_) => String::from("IncorrectArgs"),
+			EvalError::OutOfBounds(_) => String::from("OutOfBounds"),
 		}
 	}
 	pub fn get_err_msg(&self) -> String {
@@ -28,6 +31,7 @@ impl EvalError {
 			EvalError::UnexpectedNode(m) => m.to_string(),
 			EvalError::Undefined(m) => m.to_string(),
 			EvalError::IncorrectArgs(m) => m.to_string(),
+			EvalError::OutOfBounds(m) => m.to_string(),
 		}
 	}
 }
@@ -38,6 +42,35 @@ pub trait EvalNode {
 
 pub struct Eval<N: Node> {
 	pub node: N,
+}
+
+impl EvalNode for Eval<IndexExpression> {
+	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
+		let IndexExpression {
+			tok: _,
+			left,
+			index,
+		} = self.node;
+		let left = left.into_eval_node().eval(env)?;
+		let left = left.as_any()
+				.downcast_ref::<Array>()
+				.ok_or(EvalError::UnexpectedNode(String::from(
+					"Expected Array Object",
+				)))?;
+		let index = index.into_eval_node().eval(env)?;
+		let index = index.as_any().downcast_ref::<Integer>().ok_or(
+			EvalError::UnexpectedNode(String::from("Expected Integer Object")),
+		)?;
+
+		left.mems
+			.get(index.val.try_into().map_err(|_| {
+				EvalError::OutOfBounds(String::from("Invalid Integer for Index"))
+			})?)
+			.ok_or(EvalError::OutOfBounds(String::from(
+				"Index is out of bounds",
+			)))
+			.cloned()
+	}
 }
 
 impl EvalNode for Eval<Program> {
@@ -61,7 +94,7 @@ impl EvalNode for Eval<Program> {
 }
 
 impl EvalNode for Eval<StringLiteral> {
-	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
+	fn eval(self: Box<Self>, _env: &mut Env) -> ResultObj {
 		Ok(Box::new(StringObj { val: self.node.val }))
 	}
 }
@@ -193,6 +226,18 @@ fn scan_node(
 		Ok(o) => o.into_eval_node().eval(env),
 	};
 	Some(res)
+}
+
+impl EvalNode for Eval<ArrayLiteral> {
+	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
+		let mems = self
+			.node
+			.mems
+			.into_iter()
+			.map(|m| m.into_eval_node().eval(env))
+			.collect::<Result<VecDeque<Box<dyn Obj>>, EvalError>>()?;
+		Ok(Box::new(Array { mems }))
+	}
 }
 
 impl EvalNode for Eval<BooleanLiteral> {
