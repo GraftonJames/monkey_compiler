@@ -2,17 +2,24 @@ use crate::ast::Node;
 use crate::eval::builtins::*;
 use crate::object;
 use crate::{ast, eval::EvalError};
+use std::collections::hash_map::DefaultHasher;
 use std::collections::VecDeque;
+use std::hash::Hasher;
 use std::rc::Rc;
 use std::{any::Any, collections::HashMap};
 
-#[derive(PartialEq)]
+trait Hashable {
+	fn hash_key(&self) -> HashKey;
+}
+
+#[derive(PartialEq, Clone)]
 pub enum ObjType {
 	ReturnValue,
 	Integer,
 	Boolean,
 	String,
 	Array,
+	Hash,
 	Null,
 	ObjVec,
 	Error,
@@ -33,7 +40,46 @@ impl ObjType {
 			ObjType::Function => String::from("Function"),
 			ObjType::BuiltinFunction => String::from("Builtin Function"),
 			ObjType::Array => String::from("Array"),
+			ObjType::Hash => String::from("Hash"),
 		}
+	}
+}
+
+#[derive(Clone)]
+struct HashKey {
+	t: ObjType,
+	val: u64,
+}
+
+#[derive(Clone)]
+struct HashPair(Box<dyn Obj>, Box<dyn Obj>);
+
+#[derive(Clone)]
+pub struct Hash {
+	pub pairs: HashMap<HashKey, HashPair>,
+}
+impl Obj for Hash {
+	fn get_type(&self) -> ObjType {
+		ObjType::Hash
+	}
+
+	fn inspect_obj(&self) -> String {
+		let out = self
+			.pairs
+			.values()
+			.fold(String::new(), |acc, HashPair(k, v)| {
+				acc + format!(", {} : {}", k.inspect_obj(), v.inspect_obj())
+					.as_str()
+			});
+		format!("[{}]", out)
+	}
+
+	fn as_any(&self) -> &dyn Any {
+		self
+	}
+
+	fn clone_into_dyn(&self) -> Box<dyn Obj> {
+		Box::new(self.clone())
 	}
 }
 
@@ -46,7 +92,9 @@ impl Obj for Array {
 		ObjType::Array
 	}
 	fn inspect_obj(&self) -> String {
-		let out = self.mems.iter().fold(String::new(), |acc, m| acc + ", " + m.inspect_obj().as_str());
+		let out = self.mems.iter().fold(String::new(), |acc, m| {
+			acc + ", " + m.inspect_obj().as_str()
+		});
 		String::from("[") + out.as_str() + "]"
 	}
 	fn as_any(&self) -> &dyn Any {
@@ -171,6 +219,16 @@ impl Obj for StringObj {
 		Box::new(self.clone())
 	}
 }
+impl Hashable for StringObj {
+	fn hash_key(&self) -> HashKey {
+		let mut h = DefaultHasher::new();
+		self.val.chars().for_each(|c| h.write_u32(c.into()));
+		HashKey {
+			t: ObjType::String,
+			val: h.finish(),
+		}
+	}
+}
 
 #[derive(Clone)]
 pub struct Function {
@@ -241,6 +299,14 @@ impl Obj for Integer {
 		Box::new(self.clone())
 	}
 }
+impl Hashable for Integer {
+	fn hash_key(&self) -> HashKey {
+		HashKey {
+			t: ObjType::Integer,
+			val: self.val.clone(),
+		}
+	}
+}
 
 #[derive(Clone)]
 pub struct Boolean {
@@ -259,6 +325,14 @@ impl Obj for Boolean {
 	}
 	fn clone_into_dyn(&self) -> Box<dyn Obj> {
 		Box::new(self.clone())
+	}
+}
+impl Hashable for Boolean {
+	fn hash_key(&self) -> HashKey {
+		HashKey {
+			t: ObjType::Boolean,
+			val: self.val.clone(),
+		}
 	}
 }
 

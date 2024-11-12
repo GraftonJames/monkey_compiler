@@ -44,6 +44,20 @@ pub struct Eval<N: Node> {
 	pub node: N,
 }
 
+impl EvalNode for Eval<HashLiteral> {
+	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
+		let pairs: Result<_, _> =
+			self.node
+				.pairs
+				.iter()
+				.map(|(k, v)| {
+					(k.into_eval_node().eval(env)?, v.into_eval_node().eval(env)?)
+				})
+				.collect();
+		let pairs = pairs?;
+	}
+}
+
 impl EvalNode for Eval<IndexExpression> {
 	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
 		let IndexExpression {
@@ -52,7 +66,8 @@ impl EvalNode for Eval<IndexExpression> {
 			index,
 		} = self.node;
 		let left = left.into_eval_node().eval(env)?;
-		let left = left.as_any()
+		let left =
+			left.as_any()
 				.downcast_ref::<Array>()
 				.ok_or(EvalError::UnexpectedNode(String::from(
 					"Expected Array Object",

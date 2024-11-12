@@ -4,6 +4,7 @@ use crate::{
 	parser::ParserError,
 };
 use std::any::Any;
+use std::collections::HashMap;
 
 pub trait Node: Any {
 	fn token_literal(&self) -> String;
@@ -74,6 +75,38 @@ impl Node for ResultNode {
 			Err(e) => Box::new(Err(e.clone())),
 			Ok(n) => Box::new(Ok(n.clone())),
 		}
+	}
+}
+
+#[derive(Clone)]
+pub struct HashLiteral {
+	pub tok: Token,
+	pub pairs: Vec<(Box<dyn Node>, Box<dyn Node>)>,
+}
+impl Node for HashLiteral {
+	fn token_literal(&self) -> String {
+		self.tok.literal.clone()
+	}
+
+	fn string(&self) -> String {
+		let mut out = String::from("{");
+		out += self
+			.pairs
+			.iter()
+			.fold(String::new(), |acc, (k, v)| {
+				acc + format!(", {}: {}", k.string(), v.string()).as_str()
+			})
+			.as_str();
+		out += "}";
+		out
+	}
+
+	fn into_eval_node(self: Box<Self>) -> Box<dyn EvalNode> {
+		Box::new(Eval { node: *self })
+	}
+
+	fn clone_into_node(&self) -> Box<dyn Node> {
+		Box::new(self.clone())
 	}
 }
 

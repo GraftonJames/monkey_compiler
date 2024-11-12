@@ -18,6 +18,7 @@ pub enum TokenType {
 	Eq,
 	Noteq,
 
+	Colon,
 	Comma,
 	Semicolon,
 	Lparen,
@@ -54,6 +55,7 @@ impl TokenType {
 			TokenType::Gt => "> Token".to_string(),
 			TokenType::Eq => "= Token".to_string(),
 			TokenType::Noteq => "!= Token".to_string(),
+			TokenType::Colon => ": Token".to_string(),
 			TokenType::Comma => ", Token".to_string(),
 			TokenType::Semicolon => "; Token".to_string(),
 			TokenType::Lparen => "( Token".to_string(),
@@ -83,7 +85,7 @@ macro_rules! token {
 	}};
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Hash)]
 pub struct Token {
 	pub token_type: TokenType,
 	pub literal: String,

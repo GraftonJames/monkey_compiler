@@ -122,6 +122,7 @@ fn last_fn(input: Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError> {
 		)))
 		.cloned()
 }
+
 fn rest_fn(input: Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError> {
 	let input = match input.as_slice() {
 		[i] => Ok(i),
@@ -129,24 +130,22 @@ fn rest_fn(input: Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError> {
 			"Len requires one arg",
 		))),
 	}?;
-
 	match input.get_type() {
 		ObjType::Array => Ok(()),
 		_ => Err(EvalError::IncorrectArgs(String::from(
 			"first requires array argument",
 		))),
 	}?;
-
 	let mut input = input.as_any().downcast_ref::<Array>().unwrap().mems.clone();
-
-	input
-		.pop_front()
+	input.pop_front()
 		.ok_or(EvalError::IncorrectArgs(String::from(
 			"array requires atleast one argument",
 		)))?;
-
-	Ok(Box::new(Array { mems: input.clone() }))
+	Ok(Box::new(Array {
+		mems: input.clone(),
+	}))
 }
+
 fn push_fn(input: Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError> {
 	let (&ref input, &ref object) = match input.as_slice() {
 		[i, o] => Ok((i, o)),
@@ -166,5 +165,7 @@ fn push_fn(input: Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError> {
 
 	input.push_back(object.clone());
 
-	Ok(Box::new(Array { mems: input.clone() }))
+	Ok(Box::new(Array {
+		mems: input.clone(),
+	}))
 }

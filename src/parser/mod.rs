@@ -1,6 +1,6 @@
 use crate::{
-	ast,
-	ast::*,
+	ast::{self, *},
+	eval::EvalError,
 	lexer::Lexer,
 	token::{Token, TokenType},
 };
@@ -90,6 +90,7 @@ impl<I: Iterator<Item = char>> Parser<I> {
 		prefix_add!(prefix_parse_fn, Function, parse_function_literal);
 		prefix_add!(prefix_parse_fn, String, parse_string_literal);
 		prefix_add!(prefix_parse_fn, Lbracket, parse_array_literal);
+		prefix_add!(prefix_parse_fn, Lbrace, parse_hash_literal);
 
 		let mut infix_parse_fn: HashMap<TokenType, ParseInfixFunction<I>> = HashMap::new();
 		infix_add!(infix_parse_fn, Plus, parse_infix_expression);
@@ -118,6 +119,47 @@ impl<I: Iterator<Item = char>> Parser<I> {
 		Program { statements }
 	}
 
+	fn parse_hash_literal(&mut self) -> ResultNode {
+		let tok = self.expect_next_token(TokenType::Lbrace)?;
+
+		let pairs = match self.peek_token() {
+			Ok(Token {
+				token_type: TokenType::Rbrace,
+				literal: _,
+			}) => Ok(Vec::new()),
+			Ok(_) => self.parse_hash_mems(Vec::new()),
+			Err(_) => Err(ParserError::UnexpectedEOF(String::from("Unexpected EOF"))),
+		}?;
+
+		Ok(Box::new(HashLiteral { tok, pairs }))
+	}
+
+	fn parse_hash_mems(
+		&self,
+		mut hm: Vec<(Box<dyn Node>, Box<dyn Node>)>,
+	) -> Result<Vec<(Box<dyn Node>, Box<dyn Node>)>, ParserError> {
+		let k = self.parse_expression(LOWEST)?;
+		self.expect_next_token(TokenType::Colon)?;
+		let v = self.parse_expression(LOWEST)?;
+
+		hm.push((k, v));
+
+		match self.lexer.next() {
+			Some(Token {
+				token_type: TokenType::Comma,
+				literal: _,
+			}) => self.parse_hash_mems(hm),
+			Some(Token {
+				token_type: TokenType::Rbrace,
+				literal: _,
+			}) => Ok(hm),
+			Some(_) => Err(ParserError::UnexpectedToken(String::from(
+				"Expected : or }",
+			))),
+			None => Err(ParserError::UnexpectedEOF(String::from("UnexpectedEOF"))),
+		}
+	}
+
 	fn parse_array_literal(&mut self) -> ResultNode {
 		let tok = self.expect_next_token(TokenType::Lbracket)?;
 		let mems = match self.peek_token()?.token_type {
@@ -135,10 +177,9 @@ impl<I: Iterator<Item = char>> Parser<I> {
 		match self
 			.lexer
 			.next()
-			.ok_or(ParserError::UnexpectedEOF(String::from(
-				"Unexpected EOF",
-			)))?.token_type {
-
+			.ok_or(ParserError::UnexpectedEOF(String::from("Unexpected EOF")))?
+			.token_type
+		{
 			TokenType::Comma => self.parse_expression_list(left),
 			TokenType::Rbracket => Ok(left.to_vec()),
 			tt => Err(ParserError::UnexpectedToken(String::from(format!(

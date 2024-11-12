@@ -1,7 +1,7 @@
+use crate::eval::EvalError;
+use crate::lexer::Lexer;
 use crate::object::Env;
 use crate::parser::Parser;
-use crate::lexer::Lexer;
-use crate::eval::EvalError;
 use std::collections::VecDeque;
 use std::io;
 use std::io::stdin;
