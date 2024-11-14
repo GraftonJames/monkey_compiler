@@ -135,7 +135,7 @@ impl<I: Iterator<Item = char>> Parser<I> {
 	}
 
 	fn parse_hash_mems(
-		&self,
+		&mut self,
 		mut hm: Vec<(Box<dyn Node>, Box<dyn Node>)>,
 	) -> Result<Vec<(Box<dyn Node>, Box<dyn Node>)>, ParserError> {
 		let k = self.parse_expression(LOWEST)?;

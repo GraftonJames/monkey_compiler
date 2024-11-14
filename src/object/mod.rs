@@ -8,11 +8,11 @@ use std::hash::Hasher;
 use std::rc::Rc;
 use std::{any::Any, collections::HashMap};
 
-trait Hashable {
+pub trait Hashable {
 	fn hash_key(&self) -> HashKey;
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Eq, Hash)]
 pub enum ObjType {
 	ReturnValue,
 	Integer,
@@ -45,14 +45,14 @@ impl ObjType {
 	}
 }
 
-#[derive(Clone)]
-struct HashKey {
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct HashKey {
 	t: ObjType,
 	val: u64,
 }
 
 #[derive(Clone)]
-struct HashPair(Box<dyn Obj>, Box<dyn Obj>);
+pub struct HashPair(pub Box<dyn Obj>, pub Box<dyn Obj>);
 
 #[derive(Clone)]
 pub struct Hash {
@@ -303,7 +303,7 @@ impl Hashable for Integer {
 	fn hash_key(&self) -> HashKey {
 		HashKey {
 			t: ObjType::Integer,
-			val: self.val.clone(),
+			val: self.val.clone().try_into().unwrap(),
 		}
 	}
 }
@@ -331,7 +331,7 @@ impl Hashable for Boolean {
 	fn hash_key(&self) -> HashKey {
 		HashKey {
 			t: ObjType::Boolean,
-			val: self.val.clone(),
+			val: self.val.clone().try_into().unwrap(),
 		}
 	}
 }

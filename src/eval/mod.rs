@@ -13,6 +13,7 @@ pub enum EvalError {
 	Undefined(String),
 	IncorrectArgs(String),
 	OutOfBounds(String),
+	Unhashable(String),
 }
 
 impl EvalError {
@@ -23,6 +24,7 @@ impl EvalError {
 			EvalError::Undefined(_) => String::from("Undefined"),
 			EvalError::IncorrectArgs(_) => String::from("IncorrectArgs"),
 			EvalError::OutOfBounds(_) => String::from("OutOfBounds"),
+			EvalError::Unhashable(_) => todo!(),
 		}
 	}
 	pub fn get_err_msg(&self) -> String {
@@ -32,6 +34,7 @@ impl EvalError {
 			EvalError::Undefined(m) => m.to_string(),
 			EvalError::IncorrectArgs(m) => m.to_string(),
 			EvalError::OutOfBounds(m) => m.to_string(),
+			EvalError::Unhashable(_) => todo!(),
 		}
 	}
 }
@@ -46,15 +49,39 @@ pub struct Eval<N: Node> {
 
 impl EvalNode for Eval<HashLiteral> {
 	fn eval(self: Box<Self>, env: &mut Env) -> ResultObj {
-		let pairs: Result<_, _> =
-			self.node
-				.pairs
-				.iter()
-				.map(|(k, v)| {
-					(k.into_eval_node().eval(env)?, v.into_eval_node().eval(env)?)
-				})
-				.collect();
-		let pairs = pairs?;
+		let values = self
+			.node
+			.pairs
+			.into_iter()
+			.map(|(k, v)| {
+				match (k.into_eval_node().eval(env), v.into_eval_node().eval(env)) {
+					(Ok(k2), Ok(v2)) => Ok(HashPair(k2, v2)),
+					(Err(e), _) => Err(e),
+					(_, Err(e)) => Err(e),
+				}
+			})
+			.collect::<Result<Vec<HashPair>, EvalError>>()?;
+
+		let keys = values
+			.clone()
+			.into_iter()
+			.map(|HashPair(k, v)| try_hash(k))
+			.collect::<Result<Vec<HashKey>, EvalError>>()?;
+
+		let pairs = zip(keys.into_iter(), values.into_iter()).collect();
+
+		Ok(Box::new(Hash { pairs }))
+	}
+}
+
+fn try_hash(o: Box<dyn Obj>) -> Result<HashKey, EvalError> {
+	match o.get_type() {
+		ObjType::String => Ok(o.as_any().downcast_ref::<StringObj>().unwrap().hash_key()),
+		ObjType::Integer => Ok(o.as_any().downcast_ref::<Integer>().unwrap().hash_key()),
+		ObjType::Boolean => Ok(o.as_any().downcast_ref::<Boolean>().unwrap().hash_key()),
+		_ => Err(EvalError::Unhashable(String::from(
+			"Cannot hash key value must be string, integer or boolean",
+		))),
 	}
 }
 
@@ -65,19 +92,29 @@ impl EvalNode for Eval<IndexExpression> {
 			left,
 			index,
 		} = self.node;
-		let left = left.into_eval_node().eval(env)?;
-		let left =
-			left.as_any()
-				.downcast_ref::<Array>()
-				.ok_or(EvalError::UnexpectedNode(String::from(
-					"Expected Array Object",
-				)))?;
 		let index = index.into_eval_node().eval(env)?;
 		let index = index.as_any().downcast_ref::<Integer>().ok_or(
 			EvalError::UnexpectedNode(String::from("Expected Integer Object")),
 		)?;
 
-		left.mems
+		let left = left.into_eval_node().eval(env)?;
+		match left.get_type() {
+			ObjType::Array => get_indexed_array(left),
+			ObjType::Hash => get_indexed_hash(left),
+			_ => EvalError::UnexpectedNode(String::from("Expected Array Object")),
+		}
+	}
+}
+
+fn get_indexed_array(a: Box<dyn Obj>) -> Box<dyn Obj> {
+		let a =
+			a.as_any()
+				.downcast_ref::<Array>()
+				.ok_or(EvalError::UnexpectedNode(String::from(
+					"Expected Array Object",
+				)))?;
+
+		a.mems
 			.get(index.val.try_into().map_err(|_| {
 				EvalError::OutOfBounds(String::from("Invalid Integer for Index"))
 			})?)
@@ -85,7 +122,9 @@ impl EvalNode for Eval<IndexExpression> {
 				"Index is out of bounds",
 			)))
 			.cloned()
-	}
+}
+
+fn get_indexed_hash(h: Box<dyn Obj>) -> Box<dyn Obj> {
 }
 
 impl EvalNode for Eval<Program> {
