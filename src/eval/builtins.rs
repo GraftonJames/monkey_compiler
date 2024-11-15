@@ -36,6 +36,12 @@ pub fn get_builtins() -> HashMap<String, Box<dyn Obj>> {
 			func: Rc::new(Box::new(push_fn)),
 		}) as Box<dyn Obj>,
 	);
+	hm.insert(
+		String::from("puts"),
+		Box::new(Builtin {
+			func: Rc::new(Box::new(puts_fn)),
+		}) as Box<dyn Obj>,
+	);
 	hm
 }
 
@@ -168,4 +174,10 @@ fn push_fn(input: Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError> {
 	Ok(Box::new(Array {
 		mems: input.clone(),
 	}))
+}
+
+fn puts_fn(input: Vec<Box<dyn Obj>>) -> Result<Box<dyn Obj>, EvalError> {
+	input.into_iter()
+		.for_each(|o| println!("{}", o.inspect_obj()));
+	Ok(Box::new(Null{}))
 }

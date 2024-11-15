@@ -93,38 +93,81 @@ impl EvalNode for Eval<IndexExpression> {
 			index,
 		} = self.node;
 		let index = index.into_eval_node().eval(env)?;
-		let index = index.as_any().downcast_ref::<Integer>().ok_or(
-			EvalError::UnexpectedNode(String::from("Expected Integer Object")),
-		)?;
 
 		let left = left.into_eval_node().eval(env)?;
 		match left.get_type() {
-			ObjType::Array => get_indexed_array(left),
-			ObjType::Hash => get_indexed_hash(left),
-			_ => EvalError::UnexpectedNode(String::from("Expected Array Object")),
+			ObjType::Array => get_indexed_array(left, index),
+			ObjType::Hash => get_indexed_hash(left, index),
+			_ => Err(EvalError::UnexpectedNode(String::from("Expected Array Object"))),
 		}
 	}
 }
 
-fn get_indexed_array(a: Box<dyn Obj>) -> Box<dyn Obj> {
-		let a =
-			a.as_any()
-				.downcast_ref::<Array>()
-				.ok_or(EvalError::UnexpectedNode(String::from(
-					"Expected Array Object",
-				)))?;
+fn get_indexed_array(a: Box<dyn Obj>, i: Box<dyn Obj>) -> Result<Box<dyn Obj>, EvalError> {
+	let i = i
+		.as_any()
+		.downcast_ref::<Integer>()
+		.ok_or(EvalError::UnexpectedNode(String::from(
+			"Expected Integer Object",
+		)))?;
 
-		a.mems
-			.get(index.val.try_into().map_err(|_| {
-				EvalError::OutOfBounds(String::from("Invalid Integer for Index"))
-			})?)
-			.ok_or(EvalError::OutOfBounds(String::from(
-				"Index is out of bounds",
-			)))
-			.cloned()
+	let a = a
+		.as_any()
+		.downcast_ref::<Array>()
+		.ok_or(EvalError::UnexpectedNode(String::from(
+			"Expected Array Object",
+		)))?;
+
+	a.mems.get(i
+		.val
+		.try_into()
+		.map_err(|_| EvalError::OutOfBounds(String::from("Invalid Integer for Index")))?)
+		.ok_or(EvalError::OutOfBounds(String::from(
+			"Index is out of bounds",
+		)))
+		.cloned()
 }
 
-fn get_indexed_hash(h: Box<dyn Obj>) -> Box<dyn Obj> {
+fn get_indexed_hash(h: Box<dyn Obj>, i: Box<dyn Obj>) -> Result<Box<dyn Obj>, EvalError> {
+	let h = h
+		.as_any()
+		.downcast_ref::<Hash>()
+		.ok_or(EvalError::UnexpectedNode(String::from(
+			"Expected Hash Object",
+		)))?;
+
+	let i = get_hash_key(i)?;
+
+	let h = h.pairs
+		.get(&i)
+		.ok_or(EvalError::OutOfBounds(String::from(
+			"Invalid Index for hash map",
+		)))?.clone();
+
+	Ok(h.1)
+}
+
+fn get_hash_key(i: Box<dyn Obj>) -> Result<HashKey, EvalError> {
+	match i.get_type() {
+		ObjType::Integer => get_hashkey_integer(i),
+		ObjType::String => get_hashkey_string(i),
+		ObjType::Boolean => get_hashkey_boolean(i),
+		_ => Err(EvalError::UnexpectedNode(String::from(
+			"Expected Index Obj",
+		))),
+	}
+}
+
+fn get_hashkey_integer(i: Box<dyn Obj>) -> Result<HashKey, EvalError> {
+	Ok(i.as_any().downcast_ref::<Integer>().unwrap().hash_key())
+}
+
+fn get_hashkey_string(i: Box<dyn Obj>) -> Result<HashKey, EvalError> {
+	Ok(i.as_any().downcast_ref::<StringObj>().unwrap().hash_key())
+}
+
+fn get_hashkey_boolean(i: Box<dyn Obj>) -> Result<HashKey, EvalError> {
+	Ok(i.as_any().downcast_ref::<Boolean>().unwrap().hash_key())
 }
 
 impl EvalNode for Eval<Program> {
