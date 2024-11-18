@@ -1,11 +1,11 @@
-#Requires
+# Requires
 Cargo/Rust
 
-#Usage
+# Usage
 run with `cargo run`
->> idcates repl has started
+`>>` idcates repl has started
 
-#Todo
+# Todo
 More macros to reduce boilerplate
 Improve type downcasting either using dyn table for casting, or some other
        method
